@@ -1,0 +1,80 @@
+{% load attendance_tags %}
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <div class="flex items-center gap-2">
+    <a class="btn btn-secondary btn-sm" href="{{ calendar_url }}?month={{ prev_month|date:'Y-m' }}" aria-label="Mes anterior">←</a>
+    <h2 class="min-w-36 text-center text-base font-semibold text-slate-900">{{ month|date:"F Y" }}</h2>
+    <a class="btn btn-secondary btn-sm" href="{{ calendar_url }}?month={{ next_month|date:'Y-m' }}" aria-label="Mes siguiente">→</a>
+  </div>
+  <p class="text-sm text-slate-600">Trabajado este mes: <strong class="text-slate-900 tabular-nums">{{ month_worked|duration }}</strong></p>
+</div>
+
+<div class="card mt-3 overflow-hidden">
+  <div class="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-xs font-semibold tracking-wide text-slate-500 uppercase">
+    {% for name in weekday_names %}<div class="py-2">{{ name }}</div>{% endfor %}
+  </div>
+  {% for week in weeks %}
+  <div class="{% if not forloop.last %}border-b border-slate-200{% endif %}">
+    <div class="grid grid-cols-7 gap-0.5 p-1 sm:gap-1.5 sm:p-2">
+      {% for day in week.days %}
+      {# Los días de este mes son botones: al pulsar uno se muestra debajo (page.js). #}
+      {% with tag=day.muted|yesno:"div,button" %}
+      <{{ tag }}{% if not day.muted %} type="button" data-day="{{ day.date|date:'Y-m-d' }}" aria-pressed="false"{% if day.is_today %} data-today{% endif %}{% endif %}
+           class="flex min-h-16 flex-col overflow-hidden rounded-lg border p-1 text-left sm:min-h-18 sm:p-2 {{ day.status|day_style }}{% if day.muted %} opacity-40{% else %} cursor-pointer hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-900 aria-pressed:ring-2 aria-pressed:ring-sky-600{% endif %}{% if day.is_today %} ring-2 ring-slate-900{% endif %}"
+           title="{{ day.date|date:'l j \d\e F' }}{% if day.label %}: {{ day.label }}{% endif %}{% if day.holiday.tentative %} (fecha tentativa){% endif %}">
+        <span class="flex items-center justify-between">
+          <span class="text-sm font-semibold">{{ day.date.day }}</span>
+          {% if day.holiday.tentative %}<span class="text-[10px] font-medium">tentativo</span>{% endif %}
+        </span>
+        <span class="mt-0.5 line-clamp-2 text-[10px] leading-tight sm:text-xs{% if day.status == 'present' %} hidden sm:block{% endif %}">{{ day.label }}</span>
+        {% if day.entries %}<span class="mt-auto text-[10px] font-semibold tracking-tight whitespace-nowrap tabular-nums sm:text-sm sm:tracking-normal">{{ day.worked|duration }}</span>{% endif %}
+      </{{ tag }}>
+      {% endwith %}
+      {% endfor %}
+    </div>
+    {% if week.state != "before" %}
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-slate-50 px-3 py-2 text-xs text-slate-600 sm:text-sm">
+      <span>Semana del {{ week.start|date:"j M" }}</span>
+      <span class="font-semibold text-slate-900 tabular-nums">
+        {{ week.worked|duration }}{% if week.target is not None %} de {{ week.target|duration }}{% endif %}
+      </span>
+      <span class="ml-auto">{% include "attendance/_week_badge.html" %}</span>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<ul class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+  <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-full {{ 'present'|dot_style }}"></span>Presente</li>
+  <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-full {{ 'absent'|dot_style }}"></span>Ausente</li>
+  <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-full {{ 'leave'|dot_style }}"></span>Permiso</li>
+  <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-full {{ 'holiday'|dot_style }}"></span>Festivo</li>
+  <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-full {{ 'missing'|dot_style }}"></span>Sin salida</li>
+  <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-full {{ 'off'|dot_style }}"></span>Día libre</li>
+</ul>
+
+{# El día elegido en detalle. Oculto hasta que page.js permita seleccionarlo; la pestaña Registro lo muestra todo igualmente. #}
+<div class="card mt-4 p-4 print:hidden" data-day-panel hidden>
+  <p class="text-sm text-slate-500" data-day-hint>Selecciona un día en el calendario para ver sus sesiones.</p>
+  {% for week in weeks %}
+  {% for day in week.days %}
+  {% if not day.muted %}
+  <div data-day-detail="{{ day.date|date:'Y-m-d' }}" hidden>
+    <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <h3 class="text-base font-semibold text-slate-900">{{ day.date|date:"l j \d\e F" }}</h3>
+      <p class="text-sm text-slate-600">
+        {{ day.label }}{% if day.entries %}{% if day.label %} · {% endif %}<strong class="text-slate-900 tabular-nums">{{ day.worked|duration }}</strong> trabajadas{% if day.break_total %} · <span class="tabular-nums">{{ day.break_total|duration }}</span> de descanso{% endif %}{% endif %}
+      </p>
+    </div>
+    {% if day.entries %}
+    <div class="mt-3 overflow-x-auto rounded-lg border border-slate-100">
+      {% include "attendance/_entries_table.html" with days=day|listed single_day=True %}
+    </div>
+    {% else %}
+    <p class="mt-1 text-sm text-slate-500">Sin registros en este día.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endfor %}
+  {% endfor %}
+</div>

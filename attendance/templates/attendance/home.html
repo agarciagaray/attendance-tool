@@ -1,0 +1,151 @@
+{% extends "attendance/base.html" %}
+{% load attendance_tags %}
+{% block content %}
+<div class="mx-auto max-w-2xl space-y-5">
+
+  <section id="punch" class="card p-6 text-center sm:p-8"
+           data-now="{{ now_ms }}" data-open="{{ open_ms|default:'' }}" data-zone="{{ time_zone }}">
+    <p class="text-sm text-slate-500">{{ now|date:"l, j \d\e F \d\e Y" }}</p>
+    <p id="clock" class="mt-1 text-4xl font-semibold tracking-tight text-slate-900 tabular-nums">{{ now|time:"g:i:s A" }}</p>
+
+    <form method="post" action="{% url 'punch' %}" id="punch-form" class="mt-6">
+      {% csrf_token %}
+      {% if open_entry %}
+      <input type="hidden" name="action" value="out">
+      <button class="inline-flex size-40 cursor-pointer items-center justify-center rounded-full bg-rose-600 text-xl font-semibold text-white shadow-lg transition hover:bg-rose-700 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-rose-600 active:scale-95 disabled:opacity-60">Marcar salida</button>
+      <p class="mt-5 text-sm text-slate-600">
+        Entrada marcada desde <strong class="text-slate-900">{{ open_entry.clock_in|time:"g:i A" }}</strong>
+        · <span id="elapsed" class="tabular-nums">{{ open_entry.worked|duration }}</span>
+      </p>
+      <p class="mt-2 text-sm text-slate-600">
+        {% if open_entry.memo %}<span class="text-slate-900">{{ open_entry.memo }}</span> ·{% endif %}
+        <a class="link" href="{% url 'entry_memo' open_entry.pk %}?next={{ request.get_full_path|urlencode:'' }}"
+           data-memo-url="{% url 'entry_memo' open_entry.pk %}" data-memo="{{ open_entry.memo }}"
+           data-memo-title="Trabajando ahora · desde {{ open_entry.clock_in|time:'g:i A' }}">{% if open_entry.memo %}Editar nota{% else %}Agregar nota{% endif %}</a>
+      </p>
+      {% else %}
+      <input type="hidden" name="action" value="in">
+      <button class="inline-flex size-40 cursor-pointer items-center justify-center rounded-full bg-emerald-600 text-xl font-semibold text-white shadow-lg transition hover:bg-emerald-700 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-emerald-600 active:scale-95 disabled:opacity-60">Marcar entrada</button>
+      <p class="mt-5 text-sm text-slate-600">No estás en turno actualmente.</p>
+      {% endif %}
+    </form>
+    <p class="mt-2 text-xs text-slate-400">El servidor registra la hora exacta al pulsar el botón.</p>
+    <button type="button" id="install" hidden class="btn btn-secondary btn-sm mt-4">Agregar a la pantalla de inicio</button>
+  </section>
+
+  {% if auto_stopped %}
+  <div class="flex flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <p class="grow">
+      Tu temporizador se detuvo automáticamente a las <strong>{{ auto_stopped.clock_out|time:"g:i A" }}</strong>,
+      porque no se respondió a "¿Sigues trabajando?". Si seguiste trabajando, marca tu entrada de nuevo y registra el tiempo intermedio.
+    </p>
+    <a class="btn btn-secondary btn-sm" href="{% url 'missing_time_new' %}">Registrar tiempo faltante</a>
+  </div>
+  {% endif %}
+
+  {% for entry in unresolved %}
+  <div class="flex flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <p class="grow">
+      Sin salida el <strong>{{ entry.clock_in|date:"l j \d\e F" }}</strong> (entrada a las {{ entry.clock_in|time:"g:i A" }}).
+      Ese día cuenta cero horas hasta que se corrija.
+    </p>
+    <a class="btn btn-secondary btn-sm" href="{% url 'missing_time_new' %}?entry={{ entry.pk }}">Agregar salida</a>
+  </div>
+  {% endfor %}
+
+  <section class="grid gap-4 sm:grid-cols-2">
+    <div class="card p-5">
+      <h2 class="section-title">Hoy</h2>
+      <p id="today-total" data-finished="{{ finished_seconds }}" class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">{{ day.worked|duration }}</p>
+      <p class="mt-1 text-sm text-slate-500">
+        {% if day.holiday %}{{ day.holiday.name }}{% elif day.leave %}{{ day.label }}{% elif not day.working %}Día libre{% else %}Día laborable{% endif %}{% if day.break_total %} · {{ day.break_total|duration }} de descanso{% endif %}
+      </p>
+    </div>
+    <div class="card p-5">
+      <h2 class="section-title">Esta semana</h2>
+      <p class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
+        {{ week.worked|duration }}
+        {% if week.target is not None %}<span class="text-base font-normal text-slate-500">de {{ week.target|duration }}</span>{% endif %}
+      </p>
+      {% if week.target is not None %}
+      <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+        <div class="h-full rounded-full {% if week.state == 'met' %}bg-emerald-500{% else %}bg-slate-900{% endif %}" style="width: {{ week.percent }}%"></div>
+      </div>
+      <p class="mt-2 text-sm text-slate-500">
+        {% if week.state == "met" %}Horas semanales completadas.{% else %}Faltan {{ week.remaining|duration }}.{% endif %}
+      </p>
+      {% else %}
+      <p class="mt-1 text-sm text-slate-500">No tienes una meta semanal asignada.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section>
+    <div class="flex items-center justify-between">
+      <h2 class="section-title">Línea de tiempo de hoy</h2>
+      <a class="link text-sm" href="{% url 'missing_time_new' %}">¿Olvidaste marcar entrada?</a>
+    </div>
+    {% if day.entries %}
+    <div class="mt-2">
+      {% include "attendance/_timeline.html" with memo_edit=True %}
+    </div>
+    <p class="mt-2 text-xs text-slate-500">Cada sesión, con su nota, aparece en tu <a class="link" href="{% url 'calendar' %}">calendario</a>.</p>
+    {% else %}
+    <p class="card mt-2 px-4 py-6 text-center text-sm text-slate-500">Aún no hay registros hoy.</p>
+    {% endif %}
+  </section>
+</div>
+{% include "attendance/_memo_dialog.html" %}
+
+<script>
+(function () {
+  var box = document.getElementById("punch");
+  var offset = Number(box.dataset.now) - Date.now();
+  var openedAt = box.dataset.open ? Number(box.dataset.open) : null;
+  var clock = document.getElementById("clock");
+  var elapsed = document.getElementById("elapsed");
+  var total = document.getElementById("today-total");
+  var finished = Number(total.dataset.finished);
+  var format = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true, timeZone: box.dataset.zone
+  });
+
+  function duration(seconds) {
+    var minutes = Math.floor(Math.max(seconds, 0) / 60);
+    return Math.floor(minutes / 60) + "h " + String(minutes % 60).padStart(2, "0") + "m";
+  }
+
+  function tick() {
+    var now = Date.now() + offset;
+    clock.textContent = format.format(now);
+    if (openedAt !== null) {
+      var running = (now - openedAt) / 1000;
+      elapsed.textContent = duration(running);
+      total.textContent = duration(finished + running);
+    }
+  }
+
+  tick();
+  setInterval(tick, 1000);
+
+  // Los navegadores que permiten instalar el sitio como aplicación emiten este evento;
+  // solo entonces se muestra el botón. (En iPhone es Compartir -> Agregar a inicio.)
+  var install = document.getElementById("install");
+  window.addEventListener("beforeinstallprompt", function (event) {
+    event.preventDefault();
+    install.hidden = false;
+    install.onclick = function () {
+      install.hidden = true;
+      event.prompt();
+    };
+  });
+
+  // Un toque basta: evita un segundo envío mientras el primero va en camino.
+  document.getElementById("punch-form").addEventListener("submit", function (event) {
+    var button = event.target.querySelector("button");
+    if (button.disabled) { event.preventDefault(); return; }
+    setTimeout(function () { button.disabled = true; }, 0);
+  });
+})();
+</script>
+{% endblock %}

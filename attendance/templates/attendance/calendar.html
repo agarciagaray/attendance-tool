@@ -1,0 +1,10 @@
+{% extends "attendance/base.html" %}
+{% block title %}Calendario · Control de Asistencia{% endblock %}
+{% block content %}
+<h1 class="page-title">Mi calendario</h1>
+<div class="mt-4">
+  {% include "attendance/_calendar.html" with show_fix=True memo_edit=True %}
+</div>
+{% include "attendance/_month_tabs.html" with show_fix=True memo_edit=True %}
+{% include "attendance/_memo_dialog.html" %}
+{% endblock %}

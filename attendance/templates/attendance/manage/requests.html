@@ -1,0 +1,96 @@
+{% extends "attendance/base.html" %}
+{% load attendance_tags %}
+{% block title %}Solicitudes · Control de Asistencia{% endblock %}
+{% block content %}
+<h1 class="page-title">Solicitudes</h1>
+
+<div class="mt-4" data-tabs="requests">
+<div class="tablist" role="tablist" aria-label="Solicitudes" hidden>
+  <button type="button" role="tab" class="tab" data-tab="waiting">Pendientes{% if pending %} ({{ pending|length }}){% endif %}</button>
+  <button type="button" role="tab" class="tab" data-tab="history">Historial</button>
+</div>
+
+<section class="mt-4" data-panel="waiting">
+<h2 class="section-title panel-title">Esperando decisión</h2>
+{% for item in pending %}
+<div class="card mt-2 p-4">
+  <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+    <a class="link" href="{% url 'manage_employee_detail' item.employee.pk %}">{{ item.employee.display_name }}</a>
+    <span class="text-xs text-slate-500">Enviada {{ item.created_at|date:"D j M, g:i A" }}</span>
+  </div>
+  <p class="mt-2 text-sm text-slate-700">{% include "attendance/_request_what.html" %}</p>
+  {% if item.kind == "leave" %}
+  <p class="mt-1 text-sm text-slate-600">
+    Usa {{ item.days_used }} día{{ item.days_used|pluralize }} laborable{{ item.days_used|pluralize }}.
+    {% if item.balance.allowance is not None %}
+    Permiso {{ item.balance.label|lower }} en {{ item.start_date.year }}: {{ item.balance.taken }} de {{ item.balance.allowance }} ya usado{{ item.balance.taken|pluralize }}.
+    {% endif %}
+    {% if item.balance.over_by %}
+    <span class="badge bg-amber-100 text-amber-800">{{ item.balance.over_by }} día{{ item.balance.over_by|pluralize }} por encima del cupo si se aprueba</span>
+    {% endif %}
+  </p>
+  {% endif %}
+  <p class="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">{{ item.reason }}</p>
+  <form method="post" action="{% url 'manage_request_decide' item.kind item.pk %}" class="mt-3 flex flex-wrap items-center gap-2">
+    {% csrf_token %}
+    <input class="input max-w-md grow" type="text" name="note" maxlength="1000" placeholder="Nota para el empleado (opcional)" aria-label="Nota para el empleado">
+    <button class="btn btn-success" name="decision" value="approve">Aprobar</button>
+    <button class="btn btn-danger" name="decision" value="reject">Rechazar</button>
+  </form>
+</div>
+{% empty %}
+<p class="card mt-2 px-4 py-6 text-center text-sm text-slate-500">No hay solicitudes pendientes.</p>
+{% endfor %}
+</section>
+
+<section class="mt-4" data-panel="history">
+<h2 class="section-title panel-title">Decididas recientemente</h2>
+{% if decided %}
+<div class="card mt-2 overflow-x-auto">
+  <table id="decided-table" class="data-table rows-capped">
+    <thead>
+      <tr>
+        <th>Empleado</th>
+        <th>Solicitud</th>
+        <th>Motivo</th>
+        <th>Resultado</th>
+        <th><span class="sr-only">Acciones</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in decided %}
+      <tr>
+        <td class="whitespace-nowrap">{{ item.employee.display_name }}</td>
+        <td>{% include "attendance/_request_what.html" %}</td>
+        <td class="text-slate-600">{{ item.reason }}</td>
+        <td>
+          <span class="badge {{ item.status|badge_style }}">{{ item.get_status_display }}</span>
+          {% if item.decided_by %}
+          <p class="mt-1 text-xs text-slate-500">{{ item.decided_by.display_name }}, {{ item.decided_at|date:"j M" }}</p>
+          {% endif %}
+          {% if item.decision_note %}
+          <p class="mt-1 text-xs text-slate-500">{{ item.decision_note }}</p>
+          {% endif %}
+        </td>
+        <td class="text-right">
+          {% if item.kind == "leave" and item.status == "approved" %}
+          <form method="post" action="{% url 'manage_leave_cancel' item.pk %}" onsubmit="return confirm('¿Cancelar este permiso aprobado? Esos días volverán a contar para la meta semanal.')">
+            {% csrf_token %}
+            <button class="btn btn-secondary btn-sm">Cancelar permiso</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if decided|length > 10 %}
+<p class="mt-2 print:hidden"><button type="button" class="link cursor-pointer text-sm" data-show-all="decided-table">Mostrar todas ({{ decided|length }})</button></p>
+{% endif %}
+{% else %}
+<p class="card mt-2 px-4 py-6 text-center text-sm text-slate-500">Aún no hay decisiones.</p>
+{% endif %}
+</section>
+</div>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends "attendance/base.html" %}
+{% load attendance_tags %}
+{% block title %}Horarios · Control de Asistencia{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <h1 class="page-title">Horarios</h1>
+  <a class="btn btn-primary" href="{% url 'manage_schedule_new' %}">Agregar horario</a>
+</div>
+
+<div class="mt-4" data-tabs="schedules">
+<div class="tablist" role="tablist" aria-label="Horarios" hidden>
+  <button type="button" role="tab" class="tab" data-tab="week">Quién trabaja cuándo</button>
+  <button type="button" role="tab" class="tab" data-tab="definitions">Definición de horarios</button>
+</div>
+
+<section class="mt-4" data-panel="week">
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <h2 class="section-title panel-title">Quién trabaja cuándo</h2>
+  <div class="ml-auto flex items-center gap-2">
+    <a class="btn btn-secondary btn-sm" href="?week={{ prev_week|date:'Y-m-d' }}" aria-label="Semana anterior">←</a>
+    <span class="min-w-40 text-center text-sm font-semibold text-slate-900">Semana del {{ monday|date:"j M Y" }}</span>
+    <a class="btn btn-secondary btn-sm" href="?week={{ next_week|date:'Y-m-d' }}" aria-label="Semana siguiente">→</a>
+    {% if not is_current_week %}<a class="btn btn-secondary btn-sm" href="{% url 'manage_schedules' %}">Esta semana</a>{% endif %}
+  </div>
+</div>
+
+<div class="card mt-2 overflow-x-auto">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Empleado</th>
+        {% for day in days %}
+        <th class="text-center {% if day.is_today %}text-slate-900{% endif %}">
+          {{ day.date|date:"D j" }}
+          {% if day.holiday %}<div class="font-medium tracking-normal text-violet-700 normal-case">{{ day.holiday.name }}{% if day.holiday.tentative %} (tentativo){% endif %}</div>{% endif %}
+        </th>
+        {% endfor %}
+        <th class="text-right">Meta de esta semana</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td class="whitespace-nowrap">
+          <a class="link" href="{% url 'manage_employee_detail' row.employee.pk %}">{{ row.employee.display_name }}</a>
+          <div class="text-xs text-slate-500">
+            {% if row.week.terms %}
+            {{ row.week.terms.name }} · {{ row.week.terms.hours_label }} por semana
+            {% else %}
+            Sin horario · <a class="link" href="{% url 'manage_employee_edit' row.employee.pk %}">asignar uno</a>
+            {% endif %}
+          </div>
+        </td>
+        {% for day in row.week.days %}
+        <td class="text-center whitespace-nowrap">
+          {% if not row.week.terms or not day.in_scope %}
+          <span class="text-slate-300">—</span>
+          {% elif not day.working %}
+          <span class="text-slate-400">Libre</span>
+          {% elif day.holiday %}
+          <span class="badge bg-violet-100 text-violet-800">Festivo</span>
+          {% elif day.leave %}
+          <span class="badge bg-sky-100 text-sky-800">Permiso {{ day.leave.get_leave_type_display|lower }}</span>
+          {% else %}
+          <span class="text-slate-900 tabular-nums">{{ day.daily_target|duration }}</span>
+          {% endif %}
+        </td>
+        {% endfor %}
+        <td class="text-right whitespace-nowrap tabular-nums">
+          {% if row.week.target is None %}
+          <span class="text-slate-400">Sin meta</span>
+          {% elif row.week.state == "before" %}
+          <span class="text-slate-300">—</span>
+          {% else %}
+          <span class="font-medium text-slate-900">{{ row.week.target|duration }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" class="py-6 text-center text-slate-500">Aún no hay empleados activos.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="mt-2 text-xs text-slate-500">
+  Horas esperadas cada día. Un festivo o permiso aprobado en un día laborable reduce la meta de esa semana en la parte correspondiente a un día.
+  Las horas realmente trabajadas están en Asistencia.
+</p>
+</section>
+
+<section class="mt-4" data-panel="definitions">
+<h2 class="section-title panel-title mb-2">Definición de horarios</h2>
+<div class="card overflow-x-auto">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Horas por semana</th>
+        <th>Días laborables</th>
+        <th>Horas por día</th>
+        <th>Empleados</th>
+        <th><span class="sr-only">Acciones</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for schedule in schedules %}
+      <tr>
+        <td>
+          <span class="font-medium text-slate-900">{{ schedule.name }}</span>
+          {% for version in schedule.upcoming %}
+          <div class="text-xs text-sky-700">Cambia a {{ version.hours_label }}, {{ version.days_label }} desde el {{ version.effective_from|date:"j M Y" }}</div>
+          {% endfor %}
+          {% for version in schedule.past %}
+          <div class="text-xs text-slate-500">Era {{ version.hours_label }}, {{ version.days_label }} hasta el {{ version.until|date:"j M Y" }}</div>
+          {% endfor %}
+        </td>
+        <td class="tabular-nums">{{ schedule.current.hours_label }}</td>
+        <td>{{ schedule.current.days_label }}</td>
+        <td class="tabular-nums">{{ schedule.current.distribution_label }}</td>
+        <td class="tabular-nums">{{ schedule.employee_count }}</td>
+        <td class="text-right whitespace-nowrap">
+          <a class="btn btn-secondary btn-sm" href="{% url 'manage_schedule_edit' schedule.pk %}">Editar</a>
+          {% if not schedule.use_count %}
+          <form method="post" action="{% url 'manage_schedule_delete' schedule.pk %}" class="inline" onsubmit="return confirm('¿Eliminar el horario {{ schedule.name|escapejs }}?')">
+            {% csrf_token %}
+            <button class="btn btn-secondary btn-sm">Eliminar</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="py-6 text-center text-slate-500">Aún no hay horarios. Agrega uno y luego asígnalo a los empleados.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+</section>
+</div>
+{% endblock %}

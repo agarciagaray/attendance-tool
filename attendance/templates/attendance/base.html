@@ -1,0 +1,152 @@
+{% load static attendance_tags %}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Control de Asistencia{% endblock %}</title>
+  <link rel="stylesheet" href="{% asset 'attendance/app.css' %}">
+  <noscript><style>.rows-capped tbody tr { display: table-row !important; }</style></noscript>
+  <link rel="manifest" href="{% url 'manifest' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'attendance/icons/favicon-32.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'attendance/icons/apple-touch-icon.png' %}">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Control de Asistencia">
+</head>
+<body class="min-h-screen lg:overflow-visible">
+  {% if user.is_authenticated %}
+  {# En pantallas pequeñas el menú se oculta; esta barra lo abre. #}
+  <div class="sticky top-0 z-20 flex items-center gap-2 border-b border-slate-200 bg-white px-3 py-2.5 lg:hidden print:hidden">
+    <button type="button" id="menu-open" aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú"
+            class="cursor-pointer rounded-md p-2 text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-slate-900">
+      {% icon "menu" %}
+    </button>
+    <a href="{% url 'home' %}" class="text-base font-semibold tracking-tight text-slate-900">Control de Asistencia</a>
+    {% if pending_request_count %}
+    <a href="{% url 'manage_requests' %}" class="badge ml-auto bg-amber-100 text-amber-800">{{ pending_request_count }} pendiente{{ pending_request_count|pluralize }}</a>
+    {% endif %}
+  </div>
+
+  <div id="menu-backdrop" hidden class="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"></div>
+
+  <aside id="sidebar" aria-label="Menú"
+         class="invisible fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-slate-200 bg-white transition-[transform,visibility] duration-200 lg:visible lg:translate-x-0 print:hidden">
+    <div class="flex items-center justify-between px-4 py-4">
+      <a href="{% url 'home' %}" class="flex items-center gap-2.5 text-base font-semibold tracking-tight text-slate-900">
+        <svg viewBox="0 0 32 32" class="size-7" aria-hidden="true">
+          <rect width="32" height="32" rx="7" fill="#0f172a"/>
+          <circle cx="16" cy="16" r="9" fill="none" stroke="#fff" stroke-width="2.6"/>
+          <path d="M16 10.5V16h4" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="16" cy="16" r="1.9" fill="#10b981"/>
+        </svg>
+        Control de Asistencia
+      </a>
+      <button type="button" id="menu-close" aria-label="Cerrar menú"
+              class="cursor-pointer rounded-md p-1.5 text-slate-500 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-slate-900 lg:hidden">
+        {% icon "close" %}
+      </button>
+    </div>
+
+    {# El menú proviene de attendance/navigation.py, que también usan las migas de pan. #}
+    <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-2" aria-label="Páginas">
+      {% for item in menu %}
+      <a class="side-link{% if item.active %} side-link-active{% endif %}" href="{% url item.section.url_name %}">
+        {% icon item.section.icon %}{{ item.section.label }}
+        {% if item.section.url_name == "manage_requests" and pending_request_count %}
+        <span class="badge ml-auto bg-amber-100 text-amber-800">{{ pending_request_count }}</span>
+        {% endif %}
+      </a>
+      {% endfor %}
+    </nav>
+
+    <div class="border-t border-slate-200 p-3">
+      <div class="px-3 pb-2">
+        <p class="truncate text-sm font-semibold text-slate-900">{{ user.display_name }}</p>
+        <p class="truncate text-xs text-slate-500">{% if user.is_staff %}Administrador{% else %}{{ user.username }}{% endif %}</p>
+      </div>
+      <a class="side-link{% if account.active %} side-link-active{% endif %}" href="{% url account.section.url_name %}">{% icon account.section.icon %}{{ account.section.label }}</a>
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button class="side-link">{% icon "leave" %}Cerrar sesión</button>
+      </form>
+    </div>
+  </aside>
+  {% endif %}
+
+  <div class="{% if user.is_authenticated %}lg:pl-64 print:pl-0{% endif %}">
+    {% if request.impersonator %}
+    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-amber-300 bg-amber-100 px-4 py-2.5 text-sm text-amber-900 lg:px-8 print:hidden" role="status">
+      <p>Iniciaste sesión como <strong>{{ user.display_name }}</strong>. Todo lo que hagas aquí se registrará a su nombre.</p>
+      <form method="post" action="{% url 'sign_in_as_stop' %}">
+        {% csrf_token %}
+        <button class="btn btn-secondary btn-sm">Volver a administración</button>
+      </form>
+    </div>
+    {% endif %}
+    <main class="mx-auto max-w-6xl px-4 py-6 lg:px-8">
+      {% if section %}{% include "attendance/_breadcrumbs.html" %}{% endif %}
+      {% for message in messages %}
+      <div class="mb-4 rounded-lg border px-4 py-3 text-sm {{ message.tags|message_style }}" role="status">{{ message }}</div>
+      {% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {% if timer_check %}
+  {# Lo muestra page.js cuando el temporizador lleva suficiente tiempo; el servidor lo detiene si nadie responde. #}
+  <dialog id="still-working" aria-labelledby="still-working-heading"
+          data-ask="{{ timer_check.ask_ms }}" data-stop="{{ timer_check.stop_ms }}" data-now="{{ timer_check.now_ms }}" data-home="{% url 'home' %}"
+          class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-xl bg-white p-6 text-center shadow-xl backdrop:bg-slate-900/60">
+    <h2 id="still-working-heading" class="text-lg font-semibold text-slate-900">¿Sigues trabajando?</h2>
+    <p class="mt-2 text-sm text-slate-600">
+      Si no respondes, tu temporizador se detendrá en
+      <strong class="text-slate-900 tabular-nums" data-countdown></strong>
+      y marcará la salida a las {{ timer_check.asked_at|time:"g:i A" }}.
+    </p>
+    <div class="mt-5 flex flex-wrap justify-center gap-3">
+      <form method="post" action="{% url 'still_working' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button class="btn btn-primary">Sí, sigo trabajando</button>
+      </form>
+      <form method="post" action="{% url 'punch' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="out">
+        <button class="btn btn-secondary">No, marcar salida</button>
+      </form>
+    </div>
+  </dialog>
+  {% endif %}
+  <script src="{% asset 'attendance/page.js' %}" defer></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("{% url 'service_worker' %}").catch(function () {});
+    }
+
+    // Menú deslizable en pantallas pequeñas. En pantallas anchas la barra lateral siempre es visible.
+    (function () {
+      var sidebar = document.getElementById("sidebar");
+      if (!sidebar) return;
+      var opener = document.getElementById("menu-open");
+      var backdrop = document.getElementById("menu-backdrop");
+
+      function show(open) {
+        sidebar.classList.toggle("-translate-x-full", !open);
+        sidebar.classList.toggle("invisible", !open);
+        backdrop.hidden = !open;
+        opener.setAttribute("aria-expanded", open ? "true" : "false");
+        document.body.classList.toggle("overflow-hidden", open);
+        if (open) document.getElementById("menu-close").focus();
+      }
+
+      opener.addEventListener("click", function () { show(true); });
+      backdrop.addEventListener("click", function () { show(false); });
+      document.getElementById("menu-close").addEventListener("click", function () { show(false); opener.focus(); });
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && opener.getAttribute("aria-expanded") === "true") { show(false); opener.focus(); }
+      });
+    })();
+  </script>
+</body>
+</html>

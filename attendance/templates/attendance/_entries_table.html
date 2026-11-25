@@ -1,0 +1,75 @@
+{% load attendance_tags %}
+{# Con memo_edit, cada fila ofrece el editor de notas (ver _memo_dialog.html). #}
+{# Con single_day, todas las filas pertenecen a un solo día, así que se omite la columna de fecha. #}
+{# Solo la tabla del administrador (manage) muestra el motivo; el empleado ve cómo se registró cada entrada. #}
+<table class="data-table">
+  <thead>
+    <tr>
+      {% if not single_day %}<th>Fecha</th>{% endif %}
+      <th>Entrada</th>
+      <th>Salida</th>
+      <th>Trabajado</th>
+      <th>Nota de trabajo</th>
+      <th>{% if manage %}Nota{% else %}Origen{% endif %}</th>
+      {% if manage %}<th class="print:hidden"><span class="sr-only">Acciones</span></th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for day in days %}
+    {% for item in day.sequence %}
+    {% if item.is_break %}
+    <tr class="bg-slate-50">
+      {% if not single_day %}<td class="py-1.5"></td>{% endif %}
+      <td class="py-1.5 text-xs text-slate-500" colspan="{% if manage %}6{% else %}5{% endif %}">
+        Descanso · <span class="tabular-nums">{{ item.duration|duration }}</span>
+      </td>
+    </tr>
+    {% else %}
+    {% with entry=item %}
+    <tr>
+      {% if not single_day %}<td class="whitespace-nowrap {% if not forloop.first %}text-slate-300{% endif %}">{{ day.date|date:"D j M" }}</td>{% endif %}
+      <td class="whitespace-nowrap tabular-nums">{{ entry.clock_in|time:"g:i A" }}</td>
+      <td class="whitespace-nowrap tabular-nums">
+        {% if entry.clock_out %}{{ entry.clock_out|time:"g:i A" }}
+        {% elif entry.missing_out %}<span class="badge bg-amber-100 text-amber-800">Faltante</span>
+        {% else %}<span class="badge bg-sky-100 text-sky-800">Trabajando</span>{% endif %}
+      </td>
+      <td class="whitespace-nowrap tabular-nums">{% if entry.is_open %}—{% else %}{{ entry.worked|duration }}{% endif %}</td>
+      <td class="max-w-xs text-slate-700">
+        {% if entry.memo %}<span class="mr-1">{{ entry.memo }}</span>{% endif %}
+        {% if memo_edit %}
+        <a class="link whitespace-nowrap print:hidden" href="{% url 'entry_memo' entry.pk %}?next={{ request.get_full_path|urlencode:'' }}"
+           data-memo-url="{% url 'entry_memo' entry.pk %}" data-memo="{{ entry.memo }}"
+           data-memo-title="{{ day.date|date:'D j M' }} · {{ entry.clock_in|time:'g:i A' }}{% if entry.clock_out %} – {{ entry.clock_out|time:'g:i A' }}{% endif %}">{% if entry.memo %}Editar{% else %}Agregar nota{% endif %}</a>
+        {% endif %}
+      </td>
+      <td class="text-slate-600">
+        {% if entry.auto_stopped %}<span class="badge bg-amber-100 text-amber-800" title="Salida automática del sistema: no se respondió a ¿Sigues trabajando?">Detenido automáticamente</span>{% endif %}
+        {% if entry.source == "admin" %}
+          <span class="badge bg-slate-200 text-slate-700">Corrección de admin</span>
+          {% if manage %}<span class="ml-1">{{ entry.note }}</span>{% endif %}
+        {% elif entry.source == "manual" %}
+          <span class="badge bg-slate-200 text-slate-700">Manual</span>
+          {% if manage and entry.request %}<span class="ml-1">{{ entry.request.reason }}</span>{% endif %}
+        {% elif entry.source == "adjusted" %}
+          <span class="badge bg-slate-200 text-slate-700">Salida agregada</span>
+          {% if manage and entry.request %}<span class="ml-1">{{ entry.request.reason }}</span>{% endif %}
+        {% elif entry.missing_out %}
+          {% if entry.has_pending_fix %}Solicitud pendiente de aprobación
+          {% elif show_fix %}<a class="link" href="{% url 'missing_time_new' %}?entry={{ entry.pk }}">Agregar salida</a>
+          {% else %}Cuenta cero horas hasta que se corrija{% endif %}
+        {% endif %}
+      </td>
+      {% if manage %}
+      <td class="text-right whitespace-nowrap print:hidden">
+        <a class="btn btn-secondary btn-sm" href="{% url 'manage_entry_edit' entry.pk %}">Corregir</a>
+        <a class="btn btn-secondary btn-sm" href="{% url 'manage_entry_remove' entry.pk %}">Eliminar</a>
+      </td>
+      {% endif %}
+    </tr>
+    {% endwith %}
+    {% endif %}
+    {% endfor %}
+    {% endfor %}
+  </tbody>
+</table>

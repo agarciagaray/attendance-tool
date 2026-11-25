@@ -1,0 +1,32 @@
+{# Debajo del calendario del mes: línea de tiempo, registro y correcciones, uno a la vez. #}
+<div class="mt-6" data-tabs="month">
+  <div class="tablist" role="tablist" aria-label="{{ month|date:'F Y' }}" hidden>
+    <button type="button" role="tab" class="tab" data-tab="timeline">Línea de tiempo</button>
+    <button type="button" role="tab" class="tab" data-tab="record">Registro</button>
+    {% if corrections %}<button type="button" role="tab" class="tab" data-tab="corrections">Correcciones</button>{% endif %}
+  </div>
+
+  <section class="mt-4" data-panel="timeline">
+    <h2 class="section-title panel-title mb-2">Línea de tiempo de {{ month|date:"F Y" }}</h2>
+    {% if days_with_entries %}
+    {% include "attendance/_timeline.html" %}
+    {% else %}
+    <p class="card px-4 py-6 text-center text-sm text-slate-500">Sin registros en este mes.</p>
+    {% endif %}
+  </section>
+
+  <section class="mt-4" data-panel="record">
+    <h2 class="section-title panel-title mb-2">Registro de {{ month|date:"F Y" }}</h2>
+    {% if days_with_entries %}
+    {% include "attendance/_record.html" with days=days_with_entries %}
+    {% else %}
+    <p class="card px-4 py-6 text-center text-sm text-slate-500">Sin registros en este mes.</p>
+    {% endif %}
+  </section>
+
+  {% if corrections %}
+  <section class="mt-4" data-panel="corrections">
+    {% include "attendance/_corrections.html" %}
+  </section>
+  {% endif %}
+</div>

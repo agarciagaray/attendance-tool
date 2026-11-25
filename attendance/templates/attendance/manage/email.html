@@ -1,0 +1,75 @@
+{% extends "attendance/base.html" %}
+{% block title %}Correo · Control de Asistencia{% endblock %}
+{% block content %}
+<div class="max-w-2xl">
+  <h1 class="page-title">Correo</h1>
+  <p class="mt-1 text-sm text-slate-600">
+    Los avisos sobre solicitudes y correcciones se envían a través del servidor de correo configurado en el archivo <code>.env</code>.
+  </p>
+
+  <h2 class="section-title mt-6">Servidor de correo</h2>
+  {% if configured %}
+  <dl class="card mt-2 divide-y divide-slate-100 text-sm">
+    <div class="flex flex-wrap justify-between gap-x-4 px-4 py-2.5">
+      <dt class="text-slate-500">Servidor</dt>
+      <dd class="font-medium text-slate-900">{{ server.host }}, puerto {{ server.port }}</dd>
+    </div>
+    <div class="flex flex-wrap justify-between gap-x-4 px-4 py-2.5">
+      <dt class="text-slate-500">Cifrado</dt>
+      <dd class="font-medium text-slate-900">{{ server.encryption }}</dd>
+    </div>
+    <div class="flex flex-wrap justify-between gap-x-4 px-4 py-2.5">
+      <dt class="text-slate-500">Usuario</dt>
+      <dd class="font-medium text-slate-900">{{ server.username|default:"No configurado" }}</dd>
+    </div>
+    <div class="flex flex-wrap justify-between gap-x-4 px-4 py-2.5">
+      <dt class="text-slate-500">Contraseña o clave API</dt>
+      <dd class="font-medium text-slate-900">{% if server.has_password %}Configurada (no se muestra){% else %}No configurada{% endif %}</dd>
+    </div>
+    <div class="flex flex-wrap justify-between gap-x-4 px-4 py-2.5">
+      <dt class="text-slate-500">Enviado desde</dt>
+      <dd class="font-medium text-slate-900">{{ server.sender }}</dd>
+    </div>
+  </dl>
+  {% else %}
+  <p class="card mt-2 px-4 py-4 text-sm text-slate-700">
+    No hay servidor de correo configurado, así que no se envía ningún correo. Agrega las líneas <code>EMAIL_</code> a <code>.env</code>
+    (ver <code>.env.example</code>) y reinicia la aplicación.
+  </p>
+  {% endif %}
+  <p class="mt-2 text-xs text-slate-500">
+    Estos valores se leen desde <code>.env</code> al iniciar la aplicación. Reiníciala después de cambiarlos.
+  </p>
+
+  <h2 class="section-title mt-8">Enviar un correo de prueba</h2>
+  <form method="post" class="card mt-2 flex flex-wrap items-end gap-3 p-4" novalidate>
+    {% csrf_token %}
+    <div class="min-w-64 grow">
+      <label class="label" for="{{ form.to.id_for_label }}">Enviar a</label>
+      {{ form.to }}
+      {{ form.to.errors }}
+    </div>
+    <button class="btn btn-primary" {% if not configured %}disabled{% endif %}>Enviar correo de prueba</button>
+  </form>
+  <p class="mt-2 text-xs text-slate-500">
+    Usa la configuración anterior. Si falla, la razón que dio el servidor de correo aparecerá arriba en esta página.
+  </p>
+
+  <h2 class="section-title mt-8">Quién recibe avisos</h2>
+  <ul class="card mt-2 divide-y divide-slate-100 text-sm text-slate-700">
+    <li class="px-4 py-2.5">
+      <span class="font-medium text-slate-900">Las nuevas solicitudes</span> llegan a cada administrador con correo configurado:
+      {% if admin_addresses %}{{ admin_addresses|join:", " }}.{% else %}<span class="badge bg-amber-100 text-amber-800">ningún administrador tiene correo aún</span>{% endif %}
+    </li>
+    <li class="px-4 py-2.5">
+      <span class="font-medium text-slate-900">Las decisiones, correcciones y temporizadores detenidos automáticamente</span> se envían al empleado correspondiente.
+      {% if without_address %}
+      <span class="badge bg-amber-100 text-amber-800">{{ without_address }} de {{ employee_count }} empleado{{ employee_count|pluralize }} no {{ without_address|pluralize:"tiene,tienen" }} correo electrónico</span>
+      {% elif employee_count %}
+      Todos los empleados tienen correo electrónico.
+      {% endif %}
+    </li>
+  </ul>
+  <p class="mt-2 text-xs text-slate-500">Los correos se configuran en la página de <a class="link" href="{% url 'manage_employees' %}">Empleados</a>.</p>
+</div>
+{% endblock %}

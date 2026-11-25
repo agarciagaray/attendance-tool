@@ -1,0 +1,46 @@
+{% extends "attendance/base.html" %}
+{% block title %}Festivos · Control de Asistencia{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <div class="flex items-center gap-2">
+    <h1 class="page-title">Festivos</h1>
+    <a class="btn btn-secondary btn-sm ml-2" href="?year={{ year|add:'-1' }}" aria-label="Año anterior">←</a>
+    <span class="text-base font-semibold text-slate-900 tabular-nums">{{ year }}</span>
+    <a class="btn btn-secondary btn-sm" href="?year={{ year|add:'1' }}" aria-label="Año siguiente">→</a>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <form method="post" action="{% url 'manage_holiday_preset' %}">
+      {% csrf_token %}
+      <input type="hidden" name="year" value="{{ year }}">
+      <button class="btn btn-secondary">Cargar festivos de Colombia para {{ year }}</button>
+    </form>
+    <a class="btn btn-primary" href="{% url 'manage_holiday_new' %}">Agregar festivo</a>
+  </div>
+</div>
+<p class="mt-1 text-sm text-slate-600">
+  Un festivo en un día laborable reduce la meta de horas de esa semana. Incluye los festivos fijos y trasladables de Colombia
+  (Ley Emiliani y Semana Santa), y puedes agregar o editar cualquier fecha adicional.
+</p>
+
+{% if occurrences %}
+<div class="card mt-4 overflow-x-auto">
+  {% include "attendance/manage/_holiday_table.html" with rows=occurrences %}
+</div>
+{% else %}
+<p class="card mt-4 px-4 py-6 text-center text-sm text-slate-500">
+  {% if past %}No quedan más festivos en {{ year }}.{% else %}No hay festivos en {{ year }}.{% endif %}
+</p>
+{% endif %}
+
+{% if past %}
+<details class="card group mt-4 overflow-hidden">
+  <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-slate-900 [&::-webkit-details-marker]:hidden">
+    <span class="w-3 text-slate-400 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
+    Anteriores en {{ year }} ({{ past|length }})
+  </summary>
+  <div class="overflow-x-auto border-t border-slate-100">
+    {% include "attendance/manage/_holiday_table.html" with rows=past %}
+  </div>
+</details>
+{% endif %}
+{% endblock %}

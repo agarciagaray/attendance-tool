@@ -1,0 +1,86 @@
+{% extends "attendance/base.html" %}
+{% block title %}Permisos · Control de Asistencia{% endblock %}
+{% block content %}
+<h1 class="page-title">Permisos</h1>
+
+<div class="mt-4" data-tabs="leave"{% if form.errors %} data-open="allowance"{% endif %}>
+<div class="tablist" role="tablist" aria-label="Permisos" hidden>
+  <button type="button" role="tab" class="tab" data-tab="used">Permisos usados</button>
+  <button type="button" role="tab" class="tab" data-tab="allowance">Cupo anual</button>
+</div>
+
+<section class="mt-4" data-panel="allowance">
+<h2 class="section-title panel-title mb-2">Cupo anual</h2>
+<form method="post" action="?year={{ year }}" class="card p-4" novalidate>
+  {% csrf_token %}
+  <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+    {% for field in form %}
+    <div>
+      <label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {{ field.errors }}
+    </div>
+    {% endfor %}
+  </div>
+  <div class="mt-3 flex flex-wrap items-center gap-3">
+    <button class="btn btn-primary">Guardar cupos</button>
+    <p class="text-xs text-slate-500">
+      Días que cada empleado puede tomar por año calendario, igual para todos. Deja una casilla vacía para no poner límite.
+      Solo los días laborables que no son festivos consumen permiso.
+    </p>
+  </div>
+</form>
+</section>
+
+<section class="mt-4" data-panel="used">
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <h2 class="section-title panel-title">Permisos usados</h2>
+  <div class="ml-auto flex items-center gap-2">
+    <a class="btn btn-secondary btn-sm" href="?year={{ year|add:"-1" }}" aria-label="Año anterior">←</a>
+    <span class="text-base font-semibold text-slate-900 tabular-nums">{{ year }}</span>
+    <a class="btn btn-secondary btn-sm" href="?year={{ year|add:"1" }}" aria-label="Año siguiente">→</a>
+  </div>
+</div>
+
+<div class="card mt-2 overflow-x-auto">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Empleado</th>
+        {% for label in leave_types %}<th>{{ label }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td class="whitespace-nowrap">
+          <a class="link" href="{% url 'manage_employee_detail' row.employee.pk %}">{{ row.employee.display_name }}</a>
+        </td>
+        {% for balance in row.cells %}
+        <td class="whitespace-nowrap tabular-nums">
+          {% if not balance %}
+          <span class="text-slate-300">—</span>
+          {% else %}
+          <div class="{% if balance.remaining < 0 %}font-semibold text-rose-700{% else %}text-slate-900{% endif %}">
+            {{ balance.taken }}{% if balance.allowance is not None %} de {{ balance.allowance }}{% endif %}
+          </div>
+          <div class="text-xs text-slate-500">
+            {% if balance.allowance is None %}sin límite{% elif balance.remaining < 0 %}{{ balance.remaining|cut:"-" }} de exceso{% else %}{{ balance.remaining }} restante{{ balance.remaining|pluralize }}{% endif %}{% if balance.pending %} · {{ balance.pending }} pendiente{{ balance.pending|pluralize }}{% endif %}
+          </div>
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="py-6 text-center text-slate-500">Aún no hay empleados activos.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="mt-3 text-xs text-slate-500">
+  Días de permiso aprobado respecto al cupo. Las solicitudes pendientes se muestran aparte y no cuentan como usados.
+  Una solicitud que supere el cupo no se bloquea: se señala en la página de Solicitudes para que decidas.
+</p>
+</section>
+</div>
+{% endblock %}

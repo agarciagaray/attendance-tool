@@ -1,0 +1,19 @@
+{% load attendance_tags %}
+{# Editor de notas. Cualquier elemento con data-memo-url lo abre; sin JavaScript el mismo enlace lleva a una página. #}
+<dialog id="memo-dialog" aria-labelledby="memo-heading"
+        class="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl bg-white p-0 shadow-xl backdrop:bg-slate-900/40">
+  <form method="post" class="p-5">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <h2 id="memo-heading" class="text-base font-semibold text-slate-900">Nota de trabajo</h2>
+    <p class="mt-0.5 text-sm text-slate-600" data-memo-slot="title"></p>
+    <label class="sr-only" for="memo-text">En qué se empleó este tiempo</label>
+    <textarea id="memo-text" name="memo" rows="3" maxlength="300" class="input mt-3" placeholder="¿En qué se empleó este tiempo?"></textarea>
+    <p class="help">Opcional. Tu administrador puede leerla.</p>
+    <div class="mt-4 flex items-center gap-3">
+      <button class="btn btn-primary">Guardar nota</button>
+      <button type="button" class="btn btn-secondary" data-memo-cancel>Cancelar</button>
+    </div>
+  </form>
+</dialog>
+<script src="{% asset 'attendance/memo.js' %}" defer></script>

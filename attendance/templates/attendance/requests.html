@@ -1,0 +1,46 @@
+{% extends "attendance/base.html" %}
+{% load attendance_tags %}
+{% block title %}Solicitudes · Control de Asistencia{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <h1 class="page-title">Mis solicitudes</h1>
+  <div class="flex flex-wrap gap-2">
+    <a class="btn btn-primary" href="{% url 'missing_time_new' %}">Registrar tiempo faltante</a>
+    <a class="btn btn-secondary" href="{% url 'leave_new' %}">Solicitar permiso</a>
+  </div>
+</div>
+
+{% if leave_balances %}
+<h2 class="section-title mt-6">Permisos en {{ year }}</h2>
+<div class="mt-2 grid gap-3 sm:grid-cols-3">
+  {% for balance in leave_balances %}
+  <div class="card p-4">
+    <h3 class="text-sm font-medium text-slate-600">{{ balance.label }}</h3>
+    {% if balance.allowance is None %}
+    <p class="mt-1 text-2xl font-semibold text-slate-900 tabular-nums">{{ balance.taken }} <span class="text-base font-normal text-slate-500">día{{ balance.taken|pluralize }} tomado{{ balance.taken|pluralize }}</span></p>
+    <p class="text-sm text-slate-500">Sin límite anual{% if balance.pending %} · {{ balance.pending }} pendiente{{ balance.pending|pluralize }} de aprobación{% endif %}</p>
+    {% elif balance.remaining < 0 %}
+    <p class="mt-1 text-2xl font-semibold text-rose-700 tabular-nums">{{ balance.remaining|cut:"-" }} <span class="text-base font-normal">por encima del cupo</span></p>
+    <p class="text-sm text-slate-500">{{ balance.taken }} de {{ balance.allowance }} usado{{ balance.taken|pluralize }}{% if balance.pending %} · {{ balance.pending }} pendiente{{ balance.pending|pluralize }} de aprobación{% endif %}</p>
+    {% else %}
+    <p class="mt-1 text-2xl font-semibold text-slate-900 tabular-nums">{{ balance.remaining }} <span class="text-base font-normal text-slate-500">día{{ balance.remaining|pluralize }} disponible{{ balance.remaining|pluralize }}</span></p>
+    <p class="text-sm text-slate-500">{{ balance.taken }} de {{ balance.allowance }} usado{{ balance.taken|pluralize }}{% if balance.pending %} · {{ balance.pending }} pendiente{{ balance.pending|pluralize }} de aprobación{% endif %}</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="mt-6" data-tabs="my-requests">
+  <div class="tablist" role="tablist" aria-label="Mis solicitudes" hidden>
+    <button type="button" role="tab" class="tab" data-tab="missing">Tiempo faltante{% if missing_requests %} ({{ missing_requests|length }}){% endif %}</button>
+    <button type="button" role="tab" class="tab" data-tab="leave">Permisos{% if leave_requests %} ({{ leave_requests|length }}){% endif %}</button>
+  </div>
+  <section class="mt-4" data-panel="missing">
+    {% include "attendance/_my_request_list.html" with heading="Tiempo faltante" items=missing_requests %}
+  </section>
+  <section class="mt-4" data-panel="leave">
+    {% include "attendance/_my_request_list.html" with heading="Permisos" items=leave_requests %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "attendance/base.html" %}
+{% block title %}Iniciar sesión · Control de Asistencia{% endblock %}
+{% block content %}
+<div class="mx-auto mt-10 max-w-sm">
+  <h1 class="text-center text-2xl font-semibold tracking-tight text-slate-900">Control de Asistencia</h1>
+  <p class="mt-1 text-center text-sm text-slate-600">Inicia sesión para marcar tu entrada o salida.</p>
+  <form method="post" class="card mt-6 flex flex-wrap gap-y-4 p-5" novalidate>
+    {% csrf_token %}
+    {% include "attendance/_form_fields.html" %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn btn-primary w-full">Iniciar sesión</button>
+  </form>
+  <p class="mt-4 text-center text-xs text-slate-500">¿Olvidaste tu contraseña? Pídele a un administrador que te asigne
+    una nueva.</p>
+</div>
+{% endblock %}

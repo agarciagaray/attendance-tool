@@ -1,0 +1,37 @@
+{% extends "attendance/base.html" %}
+{% load attendance_tags %}
+{% block title %}Hoy · Control de Asistencia{% endblock %}
+{% block content %}
+<h1 class="page-title">Hoy <span class="font-normal text-slate-500">· {{ today|date:"l, j \d\e F \d\e Y" }}</span></h1>
+
+{% for notice in notices %}
+<div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+  {{ notice }} <a class="link" href="{% url 'manage_holidays' %}">Abrir festivos</a>
+</div>
+{% endfor %}
+
+<div class="mt-4 grid gap-4 sm:grid-cols-2">
+  <div class="card p-5">
+    <h2 class="section-title">En turno ahora</h2>
+    <p class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">
+      {{ clocked_in }} <span class="text-base font-normal text-slate-500">de {{ rows|length }}</span>
+    </p>
+  </div>
+  <a class="card block p-5 hover:border-slate-400" href="{% url 'manage_requests' %}">
+    <h2 class="section-title">Solicitudes pendientes</h2>
+    <p class="mt-2 text-2xl font-semibold text-slate-900 tabular-nums">{{ pending_request_count|default:0 }}</p>
+  </a>
+</div>
+
+{% if rows %}
+<div class="mt-4">
+  {% include "attendance/_timeline.html" %}
+</div>
+<p class="mt-2 text-xs text-slate-500">
+  Debajo de cada nombre: si está en turno ahora mismo. A la derecha: horas trabajadas hoy.
+  Las horas frente a la meta semanal están en <a class="link" href="{% url 'manage_review' %}">Asistencia</a>.
+</p>
+{% else %}
+<p class="card mt-4 px-4 py-6 text-center text-sm text-slate-500">Aún no hay empleados activos.</p>
+{% endif %}
+{% endblock %}

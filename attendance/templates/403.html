@@ -1,0 +1,9 @@
+{% extends "attendance/base.html" %}
+{% block title %}Acceso denegado · Control de Asistencia{% endblock %}
+{% block content %}
+<div class="mx-auto mt-10 max-w-md text-center">
+  <h1 class="page-title">Esta página es solo para administradores</h1>
+  <p class="mt-2 text-sm text-slate-600">Tu cuenta no tiene acceso a esta sección.</p>
+  <a class="btn btn-primary mt-5" href="{% url 'home' %}">Volver al inicio</a>
+</div>
+{% endblock %}

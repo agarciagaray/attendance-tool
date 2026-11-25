@@ -1,0 +1,29 @@
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Fecha</th>
+      <th>Festivo</th>
+      <th><span class="sr-only">Acciones</span></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for day, holiday in rows %}
+    <tr>
+      <td class="whitespace-nowrap tabular-nums">{{ day|date:"D j M Y" }}</td>
+      <td>
+        <span class="font-medium text-slate-900">{{ holiday.name }}</span>
+        {% if holiday.recurs_yearly %}<span class="badge ml-1 bg-slate-100 text-slate-600">Cada año</span>{% endif %}
+        {% if holiday.tentative %}<span class="badge ml-1 bg-amber-100 text-amber-800">Tentativo</span>{% endif %}
+      </td>
+      <td class="text-right whitespace-nowrap">
+        <a class="btn btn-secondary btn-sm" href="{% url 'manage_holiday_edit' holiday.pk %}">Editar</a>
+        <form method="post" action="{% url 'manage_holiday_delete' holiday.pk %}" class="inline" onsubmit="return confirm('¿Eliminar {{ holiday.name|escapejs }}{% if holiday.recurs_yearly %} de todos los años{% endif %}?')">
+          {% csrf_token %}
+          <input type="hidden" name="year" value="{{ year }}">
+          <button class="btn btn-secondary btn-sm">{% if holiday.recurs_yearly %}Eliminar de todos los años{% else %}Eliminar{% endif %}</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

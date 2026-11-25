@@ -1,0 +1,73 @@
+{% extends "attendance/base.html" %}
+{% load attendance_tags %}
+{% block title %}Resumen de {{ month|date:"F Y" }} · Control de Asistencia{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <h1 class="page-title">Asistencia <span class="font-normal text-slate-500">· {{ month|date:"F Y" }}</span></h1>
+  {% include "attendance/manage/_attendance_tabs.html" with tab="monthly" %}
+</div>
+
+<div class="mt-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+  <div class="flex items-center gap-2">
+    <a class="btn btn-secondary btn-sm" href="?month={{ prev_month|date:'Y-m' }}" aria-label="Mes anterior">←</a>
+    <span class="min-w-36 text-center text-base font-semibold text-slate-900">{{ month|date:"F Y" }}</span>
+    <a class="btn btn-secondary btn-sm" href="?month={{ next_month|date:'Y-m' }}" aria-label="Mes siguiente">→</a>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimir</button>
+    <a class="btn btn-secondary" href="{% url 'manage_export_monthly' %}?month={{ month|date:'Y-m' }}">CSV</a>
+  </div>
+</div>
+
+{% if rows %}
+{% if not complete %}
+<p class="mt-4 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+  Este mes sigue en curso. Los días y horas se cuentan hasta el {{ through|date:"l j \d\e F" }}.
+</p>
+{% endif %}
+
+<div class="card mt-4 overflow-x-auto">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Empleado</th>
+        <th class="text-right">Días esperados</th>
+        <th class="text-right">Presente</th>
+        <th class="text-right">Sin salida</th>
+        <th class="text-right">Ausente</th>
+        <th class="text-right">Permisos</th>
+        <th class="text-right">Festivos</th>
+        <th class="text-right">Horas trabajadas</th>
+        <th class="text-right">Meta</th>
+        <th class="text-right">Diferencia</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td class="whitespace-nowrap">
+          <a class="link" href="{% url 'manage_employee_detail' row.employee.pk %}?month={{ month|date:'Y-m' }}">{{ row.employee.display_name }}</a>
+          <div class="text-xs text-slate-500">{{ row.terms.name|default:"Sin horario" }}{% if not row.employee.is_active %} · inactivo{% endif %}</div>
+        </td>
+        <td class="text-right tabular-nums">{{ row.expected_days }}</td>
+        <td class="text-right tabular-nums">{{ row.present }}</td>
+        <td class="text-right tabular-nums {% if row.missing %}font-semibold text-amber-700{% endif %}">{{ row.missing }}</td>
+        <td class="text-right tabular-nums {% if row.absent %}font-semibold text-rose-700{% endif %}">{{ row.absent }}</td>
+        <td class="text-right tabular-nums">{{ row.leave }}</td>
+        <td class="text-right tabular-nums">{{ row.holidays }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ row.worked|duration }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ row.target|duration }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums font-medium {% if row.difference is None %}text-slate-400{% elif row.difference.total_seconds < 0 %}text-rose-700{% else %}text-emerald-700{% endif %}">{{ row.difference|signed_duration }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="mt-3 text-xs text-slate-500">
+  Los días esperados son días laborables que no fueron festivo ni permiso aprobado. La meta corresponde a la proporción de esos días sobre las horas semanales.
+  Un día sin salida cuenta cero horas hasta que se corrija.
+</p>
+{% else %}
+<p class="card mt-4 px-4 py-6 text-center text-sm text-slate-500">Aún no hay datos para reportar en {{ month|date:"F Y" }}.</p>
+{% endif %}
+{% endblock %}
