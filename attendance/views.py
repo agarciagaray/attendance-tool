@@ -16,11 +16,11 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from . import notifications, services
+from . import erp, notifications, services
 from .dates import date_text
 from .forms import LeaveForm, LoginForm, MemoForm, MissingTimeForm, OwnPasswordForm
 from .middleware import SIGNED_IN_AS
-from .models import WEEKDAY_SHORT, LeaveRequest, MissingTimeRequest, RequestStatus, TimeEntry
+from .models import WEEKDAY_SHORT, LaborRuleConfig, LeaveRequest, MissingTimeRequest, RequestStatus, TimeEntry
 from .navigation import crumb
 
 REQUEST_MODELS = {model.kind: model for model in (MissingTimeRequest, LeaveRequest)}
@@ -226,6 +226,10 @@ def entry_memo(request, pk):
 def my_calendar(request):
     month = parse_month(request.GET.get("month"), services.today())
     context = month_context(request.user, month)
+    last = month.replace(day=calendar.monthrange(month.year, month.month)[1])
+    preview = erp.build_preview_context(month, last, employee=request.user)
+    context["surcharge_summary"] = preview["employees_data"][0] if preview["employees_data"] else None
+    context["labor_rule"] = LaborRuleConfig.for_date(last)
     context["calendar_url"] = reverse("calendar")
     return render(request, "attendance/calendar.html", context)
 

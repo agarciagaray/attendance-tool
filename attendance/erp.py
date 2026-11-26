@@ -12,7 +12,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 from . import dates, labor, services
-from .models import DailyAttendanceSummary, Employee, TimeEntryBreakdown
+from .models import DailyAttendanceSummary, Employee, LeaveRequest, TimeEntryBreakdown
 
 
 def _hours_decimal(minutes):
@@ -88,6 +88,8 @@ def serialize_summary(row):
         "horas_extra_festivo_nocturna": _hours_decimal(row.overtime_holiday_night_minutes),
         "horas_permiso": _hours_decimal(row.leave_minutes),
         "tipo_permiso": row.leave_type,
+        "tipo_permiso_label": dict(LeaveRequest.LeaveType.choices).get(row.leave_type, row.leave_type) if row.leave_type else "",
+        "es_compensatorio": row.leave_type == LeaveRequest.LeaveType.COMPENSATORY,
         "alerta_extra_diaria": row.daily_overtime_exceeded,
         "exceso_extra_diaria_horas": _hours_decimal(row.daily_overtime_excess_minutes),
         "alerta_extra_semanal": row.weekly_overtime_exceeded,
@@ -245,7 +247,8 @@ def _art12_rows(start, end, employee=None, csv_mode=False):
         emp = d.employee
         obs = list(notes_by_emp_day.get((emp.pk, d.date), []))
         if d.leave_type:
-            obs.append(f"Permiso ({d.leave_type}): {_hours_decimal(d.leave_minutes):.2f} h")
+            leave_label = dict(LeaveRequest.LeaveType.choices).get(d.leave_type, d.leave_type)
+            obs.append(f"Permiso ({leave_label}): {_hours_decimal(d.leave_minutes):.2f} h")
         rest_label = "Festivo" if d.is_holiday else ("Domingo" if d.is_sunday else "No")
         rows.append(
             [

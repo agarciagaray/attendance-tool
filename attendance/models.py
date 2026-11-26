@@ -446,13 +446,14 @@ class LeaveRequest(BaseRequest):
         ANNUAL = "annual", "Anual"
         CASUAL = "casual", "Personal"
         SICK = "sick", "Incapacidad"
+        COMPENSATORY = "compensatory", "Compensatorio"
         UNPAID = "unpaid", "No remunerado"
         OTHER = "other", "Otro"
 
     kind = "leave"
 
     leave_type = models.CharField(
-        "tipo de permiso", max_length=10, choices=LeaveType.choices, default=LeaveType.CASUAL
+        "tipo de permiso", max_length=16, choices=LeaveType.choices, default=LeaveType.CASUAL
     )
     start_date = models.DateField("primer día")
     end_date = models.DateField("último día")
@@ -482,7 +483,7 @@ class LeaveAllowance(models.Model):
     Un tipo de permiso sin fila aquí no tiene límite.
     """
 
-    leave_type = models.CharField("tipo de permiso", max_length=10, choices=LeaveRequest.LeaveType.choices, unique=True)
+    leave_type = models.CharField("tipo de permiso", max_length=16, choices=LeaveRequest.LeaveType.choices, unique=True)
     days = models.PositiveSmallIntegerField("días")
 
     class Meta:
@@ -671,7 +672,7 @@ class DailyAttendanceSummary(models.Model):
     total_ordinary_minutes = models.PositiveIntegerField(default=0)
     total_overtime_minutes = models.PositiveIntegerField(default=0)
     leave_minutes = models.PositiveIntegerField(default=0)
-    leave_type = models.CharField(max_length=10, blank=True)
+    leave_type = models.CharField(max_length=16, blank=True)
     daily_overtime_exceeded = models.BooleanField(default=False)
     daily_overtime_excess_minutes = models.PositiveIntegerField(default=0)
     weekly_overtime_exceeded = models.BooleanField(default=False)

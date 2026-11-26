@@ -685,13 +685,25 @@ def schedule_edit(request, pk=None):
         if schedule
         else "Marca los días que normalmente trabajan las personas con este horario."
     )
-    return form_page(
+    day_rows = [
+        (form[day].label, form[day], form[hours])
+        for day, hours in zip(
+            ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"),
+            ("monday_hours", "tuesday_hours", "wednesday_hours", "thursday_hours", "friday_hours", "saturday_hours", "sunday_hours"),
+        )
+    ]
+    return render(
         request,
-        form,
-        title,
-        reverse("manage_schedules"),
-        intro=intro,
-        trail=[crumb(schedule.name if schedule else "Agregar horario")],
+        "attendance/manage/schedule_form.html",
+        {
+            "form": form,
+            "title": title,
+            "intro": intro,
+            "submit_label": "Guardar",
+            "cancel_url": reverse("manage_schedules"),
+            "day_rows": day_rows,
+            "breadcrumbs": [crumb(schedule.name if schedule else "Agregar horario")],
+        },
     )
 
 

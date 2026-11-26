@@ -1,10 +1,49 @@
 {% extends "attendance/base.html" %}
+{% load attendance_tags %}
 {% block title %}Calendario · Control de Asistencia{% endblock %}
 {% block content %}
 <h1 class="page-title">Mi calendario</h1>
 <div class="mt-4">
   {% include "attendance/_calendar.html" with show_fix=True memo_edit=True %}
 </div>
+
+{% if surcharge_summary %}
+<section class="mt-6">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <h2 class="section-title">Resumen de recargos y horas extras ({{ month|date:"F Y" }})</h2>
+    <span class="text-xs text-slate-500">Franja nocturna: {{ labor_rule.night_start|time:"g:i A" }}–{{ labor_rule.night_end|time:"g:i A" }}</span>
+  </div>
+  <div class="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="card p-3.5">
+      <div class="text-xs text-slate-500">Total trabajado</div>
+      <div class="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">{{ surcharge_summary.totals.total_worked|minutes_hm }}</div>
+      <div class="text-xs text-slate-500 tabular-nums">Ord. diurna: {{ surcharge_summary.totals.ordinary_day|minutes_hm }}</div>
+    </div>
+    <div class="card p-3.5">
+      <div class="text-xs text-slate-500">Recargo nocturno ({{ labor_rule.night_surcharge_pct.normalize }}%)</div>
+      <div class="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">{{ surcharge_summary.totals.ordinary_night|minutes_hm }}</div>
+    </div>
+    <div class="card p-3.5">
+      <div class="text-xs text-slate-500">Dominical / festivo ({{ labor_rule.sunday_holiday_surcharge_pct.normalize }}%)</div>
+      <div class="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">{{ surcharge_summary.totals.ordinary_holiday|minutes_hm }}</div>
+    </div>
+    <div class="card p-3.5">
+      <div class="text-xs text-slate-500">Horas extras</div>
+      <div class="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">{{ surcharge_summary.totals.total_overtime|minutes_hm }}</div>
+      <div class="text-xs text-slate-500 tabular-nums">
+        Diurnas {{ surcharge_summary.totals.overtime_day|minutes_hm }} · Noct. {{ surcharge_summary.totals.overtime_night|minutes_hm }} · Dom/Fest {{ surcharge_summary.totals.overtime_holiday|minutes_hm }}
+      </div>
+    </div>
+  </div>
+  {% if surcharge_summary.totals.daily_alerts or surcharge_summary.totals.weekly_alerts %}
+  <p class="mt-2 text-xs text-amber-800">
+    Nota informativa: se registraron {{ surcharge_summary.totals.daily_alerts }} día{{ surcharge_summary.totals.daily_alerts|pluralize }} con más de {{ labor_rule.max_daily_overtime_hours.normalize }} h extras
+    {% if surcharge_summary.totals.weekly_alerts %}y {{ surcharge_summary.totals.weekly_alerts }} semana{{ surcharge_summary.totals.weekly_alerts|pluralize }} con más de {{ labor_rule.max_weekly_overtime_hours.normalize }} h extras{% endif %}.
+  </p>
+  {% endif %}
+</section>
+{% endif %}
+
 {% include "attendance/_month_tabs.html" with show_fix=True memo_edit=True %}
 {% include "attendance/_memo_dialog.html" %}
 {% endblock %}

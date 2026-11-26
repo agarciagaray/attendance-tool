@@ -498,6 +498,7 @@ class LeaveAllowanceForm(StyledFormMixin, forms.Form):
     annual = _allowance_field("Anual")
     casual = _allowance_field("Personal")
     sick = _allowance_field("Incapacidad")
+    compensatory = _allowance_field("Compensatorio")
     unpaid = _allowance_field("No remunerado")
     other = _allowance_field("Otro")
 

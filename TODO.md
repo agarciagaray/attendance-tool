@@ -47,14 +47,14 @@ Este documento compara los requerimientos levantados para el cliente (documento 
 
 ### Prioridad Media (mejoras funcionales y operativas)
 
-- [ ] **Mejora visual en el formulario de horarios (`ScheduleForm`):**
-  - Actualmente los campos opcionales `monday_hours`..`sunday_hours` se muestran como campos estándar de formulario. Mejorar la plantilla de creación/edición de horarios para alinear cada día (checkbox + campo de horas) en una tabla compacta con cálculo en vivo de la suma semanal.
+- [x] **Mejora visual en el formulario de horarios (`ScheduleForm`):**
+  - Implementada plantilla dedicada `attendance/templates/attendance/manage/schedule_form.html` que agrupa los 7 días en una tabla compacta (checkbox + campo de horas) con cálculo en vivo de la suma semanal.
 
-- [ ] **Trazabilidad de días compensatorios (Art. 179–181 CST):**
-  - El motor ya separa trabajo ordinario/extra y normal/dominical-festivo, pero si el cliente otorga días compensatorios remunerados por trabajo habitual en domingo, agregar un tipo de permiso o marcador específico ("Compensatorio") para que quede diferenciado en el reporte hacia el ERP.
+- [x] **Trazabilidad de días compensatorios (Art. 179–181 CST):**
+  - Agregado el tipo de permiso `"Compensatorio"` (`compensatory`) en `LeaveRequest.LeaveType`, `LeaveAllowanceForm`, reportes Art. 12 / ERP, API REST (`es_compensatorio`, `tipo_permiso_label`) y vista SQL `v_erp_resumen_diario`.
 
-- [ ] **Vista de recargos/extras en el portal del empleado:**
-  - En el plan del cliente se menciona un portal de consulta de registros para el empleado. Actualmente el empleado ve sus marcaciones, horas totales, calendario y solicitudes; se puede agregar un resumen de sus horas nocturnas, dominicales y extras en su propio calendario.
+- [x] **Vista de recargos/extras en el portal del empleado:**
+  - Agregado el resumen mensual de recargos nocturnos, dominicales/festivos, horas extras y alertas informativas en `/calendar/` para el empleado en modo solo lectura.
 
 - [ ] **Prueba piloto en departamento del cliente (Fase 5 del plan):**
   - Ejecutar un piloto controlado de 1–2 semanas con empleados reales, validar redondeos decimales (`ROUND(min / 60.0, 2)`) frente al cálculo del ERP y recoger retroalimentación de administración.

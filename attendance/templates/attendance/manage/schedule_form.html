@@ -1,0 +1,144 @@
+{% extends "attendance/base.html" %}
+{% block title %}{{ title }} · Control de Asistencia{% endblock %}
+{% block content %}
+<div class="max-w-2xl">
+  <h1 class="page-title">{{ title }}</h1>
+  {% if intro %}<p class="mt-1 text-sm text-slate-600">{{ intro }}</p>{% endif %}
+
+  <form method="post" class="card mt-4 space-y-5 p-5" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+      {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="label" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+        {{ form.name }}
+        {% for error in form.name.errors %}<p class="mt-1 text-xs text-rose-700">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label class="label" for="{{ form.weekly_hours.id_for_label }}">{{ form.weekly_hours.label }}</label>
+        {{ form.weekly_hours }}
+        <p class="mt-1 text-xs text-slate-500">{{ form.weekly_hours.help_text }}</p>
+        {% for error in form.weekly_hours.errors %}<p class="mt-1 text-xs text-rose-700">{{ error }}</p>{% endfor %}
+      </div>
+    </div>
+
+    <div>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="label mb-0">Distribución semanal</span>
+        <span id="schedule-sum-status" class="text-xs font-medium text-slate-600"></span>
+      </div>
+      <p class="mt-0.5 text-xs text-slate-500">
+        Marca los días laborables. Deja las horas diarias vacías para repartir las horas semanales en partes iguales, o indica la duración de cada día (4–9 h).
+      </p>
+
+      <div class="mt-2 overflow-hidden rounded-lg border border-slate-200">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Día</th>
+              <th class="text-center">Laborable</th>
+              <th>Horas personalizadas (opcional)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for day_label, day_field, hours_field in day_rows %}
+            <tr data-day-row>
+              <td class="font-medium text-slate-900">{{ day_label }}</td>
+              <td class="text-center">{{ day_field }}</td>
+              <td>
+                {{ hours_field }}
+                {% for error in hours_field.errors %}<p class="mt-1 text-xs text-rose-700">{{ error }}</p>{% endfor %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if form.effective_from %}
+    <div class="max-w-xs">
+      <label class="label" for="{{ form.effective_from.id_for_label }}">{{ form.effective_from.label }}</label>
+      {{ form.effective_from }}
+      <p class="mt-1 text-xs text-slate-500">{{ form.effective_from.help_text }}</p>
+      {% for error in form.effective_from.errors %}<p class="mt-1 text-xs text-rose-700">{{ error }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="flex items-center gap-3 border-t border-slate-100 pt-4">
+      <button class="btn btn-primary">{{ submit_label }}</button>
+      <a class="btn btn-secondary" href="{{ cancel_url }}">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  (function () {
+    var weeklyInput = document.getElementById("{{ form.weekly_hours.id_for_label }}");
+    var statusEl = document.getElementById("schedule-sum-status");
+    var rows = document.querySelectorAll("[data-day-row]");
+
+    function updateSummary() {
+      var anyCustom = false;
+      var total = 0;
+      var workingCount = 0;
+
+      rows.forEach(function (row) {
+        var box = row.querySelector('input[type="checkbox"]');
+        var num = row.querySelector('input[type="number"]');
+        if (!box || !num) return;
+
+        num.disabled = !box.checked;
+        if (!box.checked) {
+          num.classList.add("opacity-40");
+        } else {
+          workingCount += 1;
+          num.classList.remove("opacity-40");
+          if (num.value.trim() !== "") {
+            anyCustom = true;
+            var val = parseFloat(num.value);
+            if (!isNaN(val)) total += val;
+          }
+        }
+      });
+
+      var weekly = parseFloat((weeklyInput && weeklyInput.value) || "0") || 0;
+      if (!anyCustom) {
+        if (workingCount > 0 && weekly > 0) {
+          var avg = (weekly / workingCount).toFixed(2).replace(/\.00$/, "");
+          statusEl.textContent = "Reparto equitativo: ~" + avg + " h por día (" + workingCount + " días)";
+          statusEl.className = "text-xs font-medium text-slate-600";
+        } else {
+          statusEl.textContent = "";
+        }
+        return;
+      }
+
+      var rounded = Math.round(total * 100) / 100;
+      var diff = Math.round((weekly - rounded) * 100) / 100;
+      if (Math.abs(diff) < 0.01) {
+        statusEl.textContent = "Suma personalizada: " + rounded + " h (coincide con la meta semanal)";
+        statusEl.className = "text-xs font-medium text-emerald-700";
+      } else {
+        statusEl.textContent = "Suma personalizada: " + rounded + " h (meta semanal: " + weekly + " h)";
+        statusEl.className = "text-xs font-medium text-amber-700";
+      }
+    }
+
+    if (weeklyInput) weeklyInput.addEventListener("input", updateSummary);
+    rows.forEach(function (row) {
+      row.querySelectorAll("input").forEach(function (input) {
+        input.addEventListener("input", updateSummary);
+        input.addEventListener("change", updateSummary);
+      });
+    });
+    updateSummary();
+  })();
+</script>
+{% endblock %}

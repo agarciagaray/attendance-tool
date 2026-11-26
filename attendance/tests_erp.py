@@ -10,7 +10,7 @@ from django.utils import timezone
 from openpyxl import load_workbook
 
 from . import services
-from .models import Employee, LaborRuleConfig, Schedule, TimeEntry
+from .models import Employee, LaborRuleConfig, LeaveRequest, Schedule, TimeEntry
 
 
 def aware(day, hour, minute=0):
@@ -172,3 +172,47 @@ class ErpAndReportingTests(TestCase):
             )
             sql_entry = cursor.fetchone()
             self.assertEqual(sql_entry, ("1098765432", 10.0, "Soporte nocturno"))
+
+    def test_schedule_form_template_compensatory_leave_and_employee_calendar_surcharges(self):
+        # 1. Nueva plantilla compacta de horarios
+        self.client.force_login(self.admin)
+        sched_resp = self.client.get(reverse("manage_schedule_edit", args=[self.schedule.pk]))
+        self.assertEqual(sched_resp.status_code, 200)
+        self.assertContains(sched_resp, "schedule-sum-status")
+        self.assertContains(sched_resp, "Horas personalizadas (opcional)")
+
+        # 2. Permiso de tipo Compensatorio -> reflejado en API y vista SQL
+        tue = self.monday + timezone.timedelta(days=1)
+        leave = LeaveRequest.objects.create(
+            employee=self.employee,
+            leave_type=LeaveRequest.LeaveType.COMPENSATORY,
+            start_date=tue,
+            end_date=tue,
+            reason="Compensatorio por domingo trabajado",
+        )
+        services.decide(leave, self.admin, approve=True)
+
+        summary_resp = self.client.get(
+            reverse("api_erp_summary"),
+            {"start": tue.isoformat(), "end": tue.isoformat(), "document_number": "1098765432"},
+        )
+        self.assertEqual(summary_resp.status_code, 200)
+        comp_row = summary_resp.json()["results"][0]
+        self.assertEqual(comp_row["tipo_permiso"], "compensatory")
+        self.assertEqual(comp_row["tipo_permiso_label"], "Compensatorio")
+        self.assertTrue(comp_row["es_compensatorio"])
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT tipo_permiso, es_compensatorio FROM v_erp_resumen_diario WHERE cedula = %s AND fecha = %s",
+                ["1098765432", tue.isoformat()],
+            )
+            self.assertEqual(cursor.fetchone(), ("compensatory", 1))
+
+        # 3. Portal del empleado (/calendar/) muestra resumen de recargos y extras
+        self.client.force_login(self.employee)
+        cal_resp = self.client.get(reverse("calendar"), {"month": "2026-09"})
+        self.assertEqual(cal_resp.status_code, 200)
+        self.assertContains(cal_resp, "Resumen de recargos y horas extras")
+        self.assertContains(cal_resp, "Recargo nocturno")
+        self.assertContains(cal_resp, "3h 24m")
