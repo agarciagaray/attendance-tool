@@ -1,12 +1,11 @@
 <h1 align="center">Control de Asistencia</h1>
 
 <p align="center">
-  Una herramienta autohospedada de control de asistencia para equipos pequeños.<br>
-  Un solo botón para marcar entrada y salida, y un registro claro para quien administra el equipo.
+  Sistema autohospedado de control de asistencia y cumplimiento laboral colombiano.<br>
+  Marcación simple para empleados, cálculo automático de recargos y horas extras, reporte Art. 12 Ley 2466 e integración con ERP.
 </p>
 
 <p align="center">
-  <a href="https://github.com/Blankscreen-exe/attendance-tool/actions/workflows/tests.yml"><img alt="Tests" src="https://github.com/Blankscreen-exe/attendance-tool/actions/workflows/tests.yml/badge.svg"></a>
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white">
   <img alt="Django 5.2" src="https://img.shields.io/badge/Django-5.2-092E20?logo=django&logoColor=white">
   <img alt="Tailwind CSS 4" src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white">
@@ -22,228 +21,212 @@
 
 ## Por qué existe
 
-Las suites completas de recursos humanos hacen asistencia, nómina, selección y una docena de cosas más, y son pesadas de configurar y usar. Este proyecto hace una sola tarea: registra cuándo trabaja cada persona y muestra si se cumplieron las horas acordadas.
+Las suites tradicionales de recursos humanos mezclan nómina, selección y reglamentos internos complejos. Este proyecto se enfoca en el flujo operativo y legal de asistencia en Colombia: **recolección de marcaciones → cálculo de jornada, recargos y horas extras → exportación e integración con el ERP de nómina**.
 
-- **Los empleados** inician sesión y pulsan un único botón. No pueden escribir una hora manualmente.
-- **El administrador** ve quién está en turno, revisa cualquier semana o mes, decide solicitudes y configura horarios, festivos y permisos.
-- **Corre en un servidor pequeño**, como un solo contenedor con un archivo SQLite, o con PostgreSQL si lo prefieres.
+- **Para empleados:** inician sesión y pulsan un único botón para marcar entrada o salida (en formato de 12 horas y zona horaria `America/Bogota`). No pueden alterar la hora del servidor.
+- **Para administración:** visualiza quién está en turno en tiempo real, aprueba solicitudes de tiempo faltante y permisos, configura jornadas (hasta 42 h semanales con distribución diaria flexible), consulta la vista previa de recargos/extras y exporta reportes legales y archivos para nómina.
+- **Integración ERP incluida:** exportación en Excel (`.xlsx`) y CSV, API REST JSON autenticada y vistas SQL directas.
 
-## Funcionalidades
+---
 
-**Para empleados**
+## Funcionalidades principales
 
-- Un único botón para marcar entrada / salida. El servidor registra la hora.
-- Horas de hoy y progreso de la semana frente a la meta.
-- Calendario mensual: presente, ausente, permiso, festivo, día libre o sin salida.
-- Línea de tiempo de cada día, mostrando los descansos entre sesiones.
-- Solicitudes por tiempo faltante (con motivo) y de permisos, con el saldo disponible del año.
-- **Notas de trabajo:** una nota opcional sobre en qué se empleó cada tramo de trabajo, escrita desde el reloj, el registro o seleccionando el tramo en la línea de tiempo. Los administradores pueden leerlas y aparecen en la exportación diaria.
-- Instalable en la pantalla de inicio del teléfono.
+### Para empleados
+- **Reloj en vivo:** un solo botón para marcar entrada y salida; el servidor registra la hora exacta en UTC y la muestra en hora de Bogotá (12 h).
+- **Resumen del día y la semana:** horas trabajadas hoy y progreso frente a la meta semanal.
+- **Calendario mensual y línea de tiempo:** estado diario (presente, ausente, permiso, festivo, día libre o sin salida) y descansos entre tramos.
+- **Solicitudes:** tiempo faltante (entrada/salida olvidada con motivo) y permisos/ausencias con saldo anual visible.
+- **Notas de trabajo:** anotación opcional por cada tramo trabajado, visible para el administrador y en exportaciones.
+- **PWA instalable:** se puede agregar a la pantalla de inicio en Android/iOS (requiere HTTPS).
 
-**Para administración**
+### Para administración
+- **Hoy:** tablero en tiempo real con línea de tiempo de quienes están en turno.
+- **Asistencia (Por semana, Por mes, Recargos y extras):**
+  - Seguimiento semanal y mensual frente a la meta, con exportación CSV y resumen mensual imprimible.
+  - **Vista previa de recargos y horas extras:** desglose por empleado y por día en 8 conceptos (ordinaria diurna, recargo nocturno, ordinaria dominical/festiva diurna y nocturna, extra diurna, extra nocturna, extra dominical/festiva diurna y nocturna), más permisos y alertas.
+- **Cumplimiento laboral colombiano (CST y Ley 2466 de 2025):**
+  - **Identificación y contrato:** cada empleado cuenta con número de documento/cédula (único) y tipo de contrato (término indefinido, fijo, obra o labor, aprendizaje, exento/dirección, tiempo parcial).
+  - **Jornadas configurables (≤ 42 h):** soporta jornadas de 42 h o menores (40 h, 38 h, etc.) y **distribución diaria irregular** personalizada (entre 4 y 9 horas por día laborable).
+  - **Regla combinada diaria + semanal (Art. 159 CST):** reconoce el exceso sobre la jornada diaria pactada y controla el límite semanal sin contar dos veces una misma hora.
+  - **Separación de recargos (Art. 179–181 CST):** clasifica de forma independiente si la hora es ordinaria o extra, diurna o nocturna (`19:00`–`06:00`), y si corresponde a día normal o dominical/festivo.
+  - **Alertas sin bloqueo:** señala cuando se superan las **2 horas extras diarias** o **12 horas extras semanales**, sin detener el cálculo ni la exportación al ERP.
+  - **Reglas laborales versionadas (`/manage/labor-rules/`):** parámetros editables por fecha de vigencia (jornada máxima semanal, mínima/máxima diaria, franja nocturna, porcentajes de recargos y límites de alerta).
+  - **Reporte Art. 12 Ley 2466:** exportación dedicada en **Excel (`.xlsx`)** (con hoja de detalle diario y hoja de resumen por empleado) y **CSV**.
+- **Festivos de Colombia:** generador integrado con festivos fijos, traslados por Ley Emiliani y Semana Santa para 2026 y años siguientes.
+- **Bandeja de solicitudes, correcciones con historial, "¿Sigues trabajando?" y correo SMTP:** flujo completo de auditoría donde los cambios manuales conservan el registro anterior.
 
-- **Hoy:** quién está en turno en este momento, con una barra de línea de tiempo por empleado.
-- **Asistencia por semana y por mes:** horas frente a la meta para cualquier rango, con exportación CSV y resumen mensual listo para imprimir.
-- **Bandeja de solicitudes:** aprobar o rechazar con una nota. Los permisos que superan el cupo anual se señalan, no se bloquean.
-- **"¿Sigues trabajando?":** un temporizador que lleva 4 horas continuas sin descanso le pregunta al empleado. Si no responde en 10 minutos, se marca la salida en el punto de las 4 horas y se le envía un correo. Ambos tiempos se configuran en la página de Configuración.
-- **Correcciones:** agregar, corregir o eliminar un registro con motivo. Los valores anteriores se conservan en un historial visible para el empleado.
-- **Entrar como empleado:** ver el sitio exactamente como lo ve el empleado, sin su contraseña. Un aviso en cada página permite volver al panel de administración.
-- **Horarios:** horas semanales y días laborables, con una vista semana a semana de quién debe trabajar cuándo. Los cambios aplican a partir de la semana elegida.
-- **Festivos:** una lista editable que inicia con los festivos públicos de Colombia (fijos, Ley Emiliani y Semana Santa para 2026 y los próximos años).
-- **Permisos:** cupo anual por tipo de permiso y saldo de cada persona.
-- **Correo:** avisos por SMTP, con un botón de prueba que explica los fallos.
+---
 
-**Incluido de serie**
+## Instalación y puesta en marcha
 
-- Bloqueo de inicio de sesión tras varios intentos con contraseña incorrecta.
-- Los administradores gestionan el sistema: no registran asistencia propia ni marcan entrada.
-- SQLite por defecto, PostgreSQL mediante una variable de entorno.
+### Requisitos
+- **Python 3.10 o superior** (probado con Python 3.12 / 3.15 y Django 5.2).
+- **Git** (opcional, para clonar el repositorio).
+- **Node.js** (solo si deseas recompilar los estilos Tailwind CSS; los estilos compilados ya vienen incluidos).
 
-## Capturas de pantalla
+### 1. Ejecución local (desarrollo / pruebas con SQLite)
 
-Todos los nombres y cifras de estas imágenes son datos de demostración ficticios.
+```bash
+# 1. Clonar o ubicarse en la carpeta del proyecto
+cd attendance-tool
 
-| | |
-|---|---|
-| **Calendario mensual y línea de tiempo**<br>Cada semana muestra las horas frente a su meta.<br><br><img src="docs/screenshots/calendar.png" alt="Calendario mensual de un empleado con línea de tiempo de cada día"> | **Asistencia por semana**<br>Verde cumplió la meta, rojo quedó por debajo, azul sigue en curso.<br><br><img src="docs/screenshots/attendance-weekly.png" alt="Tabla de empleados y semanas con horas frente a la meta"> |
-| **Solicitudes**<br>Tiempo faltante y permisos, con el saldo disponible junto a cada solicitud.<br><br><img src="docs/screenshots/requests.png" alt="Bandeja de solicitudes de administración con botones para aprobar y rechazar"> | **Horarios**<br>Quién debe trabajar cuándo y cómo ha cambiado cada horario en el tiempo.<br><br><img src="docs/screenshots/schedules.png" alt="Tabla de empleados y horas esperadas en cada día de la semana"> |
-| **Resumen mensual**<br>Días y horas por empleado, listo para imprimir o exportar.<br><br><img src="docs/screenshots/attendance-monthly.png" alt="Tabla de resumen mensual con días presentes, ausentes y horas trabajadas"> | **Permisos**<br>Cupos anuales y lo que ha usado cada persona.<br><br><img src="docs/screenshots/leave.png" alt="Cupos de permisos y saldo de cada empleado"> |
-
-En un teléfono, el menú se oculta detrás de un botón:
-
-<p align="center">
-  <img src="docs/screenshots/clock-phone.png" alt="La página del reloj en un teléfono" width="280">
-  &nbsp;&nbsp;
-  <img src="docs/screenshots/menu-phone.png" alt="El menú abierto en un teléfono" width="280">
-</p>
-
-## Cómo funciona
-
-Algunas decisiones definen todo el proyecto.
-
-**El servidor controla el reloj.** El botón solo envía "in" o "out". La hora se toma en el servidor, se guarda en UTC y se muestra en la zona horaria de la empresa (`America/Bogota` por defecto), así que un reloj del dispositivo alterado o incorrecto no cambia nada. Además, el botón indica la intención exacta, por lo que un doble toque nunca puede marcar entrada y salida seguidas.
-
-**Un único cálculo, muchas vistas.** Cada celda del calendario, total semanal, resumen mensual y fila CSV proviene de la misma función, que calcula cada día a partir de cuatro fuentes: registros de tiempo, permisos aprobados, festivos y el horario vigente esa semana. No se almacena nada derivado, por lo que las vistas no pueden contradecirse.
-
-**El pasado no se reescribe.** Las horas y días de un horario se guardan como versiones fechadas, al igual que la asignación de cada persona a un horario. Subir una meta desde la próxima semana deja las semanas anteriores evaluadas con lo que aplicaba entonces. Las correcciones funcionan igual: el registro cambia y los valores anteriores permanecen en el historial.
-
-**La base de datos impide lo que nunca debe pasar.** Un índice único parcial permite como máximo un registro abierto por empleado, y restricciones de comprobación mantienen la salida posterior a la entrada tanto en SQLite como en PostgreSQL.
-
-**Sin procesos que vigilar.** Una salida olvidada se marca la próxima vez que alguien abre la aplicación, así que no hace falta ningún programador de tareas corriendo para que el registro sea correcto. Ese registro cuenta cero horas hasta que una solicitud o corrección aporte la hora.
-
-**Solicitudes en lugar de ediciones.** Los empleados nunca ingresan horas directamente. Una marcación olvidada se convierte en una solicitud con motivo; al aprobarse queda marcada como manual con el motivo adjunto.
-
-**Probado en ambas bases de datos.** La suite de pruebas cubre reglas de asistencia, historial de horarios, solicitudes, correcciones, permisos, correo, bloqueo de acceso, permisos de rol y cada página. GitHub Actions la ejecuta en SQLite y PostgreSQL en cada push, y verifica que la imagen Docker construya e inicie. Una prueba migra datos antiguos hacia adelante para comprobar que la migración de historial de horarios los conserva.
-
-## Stack tecnológico
-
-| Capa | Elección | Por qué |
-|---|---|---|
-| Backend | Django 5.2 (Python 3.10+) | Autenticación, sesiones, migraciones y un ORM que corre igual en ambas bases de datos |
-| Base de datos | SQLite, o PostgreSQL | Un solo archivo para una oficina pequeña; un servidor real cuando se necesite |
-| Frontend | Plantillas renderizadas en servidor, Tailwind CSS 4 compilado | Sin paso de compilación en el servidor, sin SPA para lo que es principalmente un botón |
-| JavaScript | Unos pocos scripts pequeños, sin framework | El reloj en vivo, tooltips de gráficos, pestañas y el editor de notas |
-| Despliegue | Docker, gunicorn, WhiteNoise | Un solo contenedor que sirve la aplicación y sus archivos estáticos |
-
-## Primeros pasos
-
-### Ejecutar localmente
-
-```
+# 2. Crear y activar entorno virtual
 python -m venv .venv
-.venv\Scripts\activate            # Windows; en Linux/macOS: source .venv/bin/activate
+# En Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+# En Linux / macOS:
+# source .venv/bin/activate
+
+# 3. Instalar dependencias (incluye Django, openpyxl, psycopg, etc.)
 pip install -r requirements.txt
-echo DEBUG=true > .env
+
+# 4. Crear archivo de configuración local
+copy .env.example .env    # en Linux/macOS: cp .env.example .env
+# Edita .env y asegúrate de tener DEBUG=true y un SECRET_KEY (o deja DEBUG=true para pruebas locales)
+
+# 5. Aplicar migraciones (crea tablas, regla laboral inicial, festivos de Colombia y vistas SQL)
 python manage.py migrate
+
+# 6. Crear usuario administrador inicial
 python manage.py createsuperuser
+
+# 7. Iniciar servidor local
 python manage.py runserver
 ```
 
-Abre http://localhost:8000, inicia sesión y luego agrega un horario en **Horarios** y personas en **Empleados**.
+Abre `http://127.0.0.1:8000` en tu navegador e inicia sesión con el administrador creado.
 
-### Desplegar con Docker
+> **Importante:** la base de datos SQLite se guarda en `data/db.sqlite3`. Los administradores gestionan el sistema y no marcan entrada ni salida; para probar el reloj de marcación, crea un empleado (sin marcar "Administrador") desde **Empleados → Agregar empleado**, asígnale un horario y usa el botón **Entrar como** o inicia sesión con su usuario.
 
-```
-cp .env.example .env              # luego completa SECRET_KEY, ALLOWED_HOSTS, ADMIN_PASSWORD
+### 2. Despliegue con Docker
+
+```bash
+cp .env.example .env
+# Completa SECRET_KEY, ALLOWED_HOSTS, ADMIN_USERNAME y ADMIN_PASSWORD en .env
 docker compose up -d --build
 ```
 
-La aplicación escucha en el puerto 8000. En el primer arranque crea la base de datos y la cuenta de administrador definida en `.env`. El archivo SQLite vive en el volumen `attendance_data`.
+La aplicación queda escuchando en el puerto `8000` con SQLite persistido en el volumen `attendance_data`. Detrás de un proxy inverso HTTPS (Nginx, Caddy o Traefik), activa `HTTPS=true` y `CSRF_TRUSTED_ORIGINS`.
 
-Coloca delante un proxy inverso que termine HTTPS (Caddy, nginx o Traefik), y configura `HTTPS=true` y `CSRF_TRUSTED_ORIGINS` en `.env`.
+### 3. Con PostgreSQL
 
-Para actualizar: descarga el código nuevo y ejecuta `docker compose up -d --build` otra vez. Las migraciones se aplican al iniciar.
+Define `POSTGRES_PASSWORD` en `.env` y ejecuta:
 
-### Con PostgreSQL
-
-Configura `POSTGRES_PASSWORD` en `.env` y luego ejecuta:
-
-```
+```bash
 docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --build
 ```
 
-Para usar un servidor PostgreSQL que ya tengas, configura `DATABASE_URL` en `.env` y usa el `docker compose up` normal.
+O apunta `DATABASE_URL` en `.env` a una instancia PostgreSQL existente. *(Nota: revisa la sección de vistas SQL en `TODO.md` antes de migrar las vistas a PostgreSQL).*
 
-## Configuración
+---
 
-Todo se configura mediante variables de entorno o `.env`.
+## Guía de uso rápida
 
-| Variable | Por defecto | Significado |
+1. **Configurar reglas laborales (opcional, ya viene preconfigurada):**
+   - Ve a **Asistencia → Recargos y extras → Reglas laborales** (o `/manage/labor-rules/`) para revisar la vigencia inicial (`2024-07-15`, 42 h/semana, nocturno `7:00 PM`–`6:00 AM`, recargos 35%, 90%, 25%, 75%, 115%, 165%).
+2. **Crear horarios:**
+   - Ve a **Horarios → Agregar horario**. Define las horas semanales (p. ej. `42`, `40` o `38`) y los días laborables.
+   - Si el horario tiene **distribución diaria irregular** (p. ej. 9 h de lunes a jueves y 6 h el viernes), ingresa las horas específicas de cada día; el sistema valida que estén entre la jornada mínima y máxima diaria y que sumen exactamente las horas semanales.
+3. **Crear empleados:**
+   - Ve a **Empleados → Agregar empleado**. Registra **Cédula / Documento**, nombre, usuario, **Tipo de contrato**, horario y fecha de inicio.
+4. **Registro diario del empleado:**
+   - El empleado inicia sesión y en **Reloj** pulsa **Marcar entrada** al iniciar, puede pausar/salir en descansos y pulsa **Marcar salida** al terminar. Cada marcación cerrada actualiza automáticamente su desglose diario y semanal.
+5. **Revisión, vista previa y exportaciones:**
+   - En **Asistencia → Recargos y extras**, filtra por rango de fechas o empleado para ver horas ordinarias, recargos, extras y alertas.
+   - Descarga desde los botones superiores:
+     - **Art. 12 (.xlsx)** / **Art. 12 (.csv)**: reporte detallado de trabajo suplementario conforme al Art. 12 de la Ley 2466.
+     - **ERP (.xlsx)** / **ERP (.csv)**: archivo plano para importación en nómina.
+
+---
+
+## Integración con ERP
+
+El aplicativo ofrece tres mecanismos de integración que leen exactamente las mismas tablas calculadas (`DailyAttendanceSummary` y `TimeEntryBreakdown`):
+
+### 1. Archivos Excel (`.xlsx`) y CSV
+Disponibles desde **Asistencia → Recargos y extras**:
+- `/manage/attendance/erp.xlsx` y `/manage/attendance/erp.csv`
+- `/manage/attendance/art12.xlsx` y `/manage/attendance/art12.csv`
+
+### 2. API REST JSON
+- `GET /api/v1/erp/summary/?start=YYYY-MM-DD&end=YYYY-MM-DD&employee_id=&document_number=`
+- `GET /api/v1/erp/entries/?start=YYYY-MM-DD&end=YYYY-MM-DD&employee_id=&document_number=`
+
+**Autenticación:** mediante sesión de usuario administrador (`is_staff=True`) o enviando el token configurado en `ERP_API_TOKEN`:
+
+```bash
+curl -H "Authorization: Bearer TU_TOKEN_ERP" \
+  "http://127.0.0.1:8000/api/v1/erp/summary/?start=2026-11-01&end=2026-11-30"
+```
+
+También acepta el encabezado `X-API-Key: TU_TOKEN_ERP`.
+
+### 3. Vistas SQL directas (SQLite)
+La migración `0013_erp_sql_views` crea dos vistas listas para consulta directa desde conectores ODBC/SQLite del ERP:
+- `v_erp_resumen_diario`: resumen por empleado y fecha con cédula, usuario, tipo de contrato, festivo/domingo, minutos y horas decimales de cada una de las 8 cubetas, permisos y banderas de alerta.
+- `v_erp_desglose_marcaciones`: detalle por cada marcación individual (`TimeEntry`) con entrada/salida UTC, origen, minutos/horas por concepto, nota y memo.
+
+---
+
+## Variables de entorno (`.env`)
+
+| Variable | Por defecto | Descripción |
 |---|---|---|
-| `SECRET_KEY` | ninguno | Obligatorio salvo con `DEBUG=true`. |
-| `DEBUG` | `false` | Modo desarrollo. Nunca activarlo en un servidor. |
-| `ALLOWED_HOSTS` | `localhost` | Nombres de host a los que responde la app, separados por coma. |
-| `CSRF_TRUSTED_ORIGINS` | vacío | P. ej. `https://asistencia.ejemplo.com`, cuando está detrás de un proxy HTTPS. |
-| `HTTPS` | `false` | Marca las cookies como seguras y confía en el encabezado `X-Forwarded-Proto` del proxy. |
+| `SECRET_KEY` | ninguno | Obligatorio si `DEBUG=false`. |
+| `DEBUG` | `false` | Modo desarrollo (`true` solo en local). |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1,[::1]` | Hosts permitidos separados por coma. |
+| `CSRF_TRUSTED_ORIGINS` | vacío | Orígenes HTTPS permitidos (ej. `https://asistencia.empresa.com`). |
+| `HTTPS` | `false` | Cookies seguras detrás de proxy inverso HTTPS. |
 | `TIME_ZONE` | `America/Bogota` | Zona horaria de la empresa. |
-| `DAY_ROLLOVER_HOUR` | `0` | Hora a la que cambia el día de asistencia. Súbela (p. ej. `5`) si hay turnos después de medianoche, para que el trabajo nocturno cuente en el día que empezó. |
-| `DATABASE_URL` | vacío | Vacío usa SQLite. `postgres://usuario:clave@host:5432/nombre` para PostgreSQL. |
-| `EMAIL_HOST` | vacío | Servidor SMTP. Vacío significa que no se envían correos. |
-| `EMAIL_PORT` | `587` | 587 usa STARTTLS. Para 465 también configura `EMAIL_USE_SSL=true`. |
-| `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | vacío | Credenciales SMTP. Si usas clave API SMTP, va en la contraseña. |
-| `EMAIL_FROM` | el usuario SMTP | Dirección desde la que se envían los avisos. |
-| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | vacío | Solo Docker: crea el primer administrador si aún no existe ninguno. |
+| `DAY_ROLLOVER_HOUR` | `0` | Hora de corte del día laboral (`0` = medianoche). |
+| `DATABASE_URL` | vacío | Vacío usa SQLite (`data/db.sqlite3`). Para Postgres: `postgres://...`. |
+| `ERP_API_TOKEN` | vacío | Token Bearer / `X-API-Key` para consumir `/api/v1/erp/*`. |
+| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_SSL`, `EMAIL_FROM` | vacío | Configuración SMTP opcional para notificaciones. |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | vacío | Solo Docker: crea el administrador inicial si no existe ninguno. |
 
-### Correo electrónico
-
-El correo está desactivado hasta configurar `EMAIL_HOST`. Completa las líneas `EMAIL_*` en `.env` con los datos SMTP de tu proveedor de correo y reinicia. Si tu proveedor da una clave API para SMTP, esa clave va en la contraseña.
-
-Para comprobar que funciona, inicia sesión como administrador y abre la página **Correo**. Muestra el servidor de correo en uso (nunca la contraseña) y tiene un botón "Enviar correo de prueba". Si el envío falla, la página explica por qué: clave incorrecta, servidor inalcanzable, remitente rechazado o discrepancia entre puerto y cifrado.
-
-Los avisos se envían al correo de cada cuenta, así que agrega las direcciones en la página **Empleados**. Quienes no tengan dirección simplemente no reciben correos. Si el servidor de correo falla, el error se registra en el log y la aplicación sigue funcionando.
-
-### Instalar en teléfonos
-
-Los teléfonos solo ofrecen instalar un sitio servido por HTTPS. Una vez lo esté:
-
-- Android (Chrome): abre el sitio y usa "Agregar a la pantalla de inicio" en la página del reloj, o "Instalar aplicación" en el menú del navegador.
-- iPhone (Safari): Compartir y luego "Agregar a inicio".
-
-Sigue requiriendo conexión. Nada funciona sin internet, porque el servidor es quien registra la hora.
-
-### Copias de seguridad
-
-- SQLite: detén la aplicación, copia el archivo hacia afuera y vuelve a iniciarla:
-  `docker compose stop && docker compose cp web:/app/data/db.sqlite3 ./backup.sqlite3 && docker compose start`
-- PostgreSQL: `pg_dump`.
-
-## Reglas importantes
-
-- Una salida olvidada se marca cuando termina el día. Ese registro cuenta cero horas hasta que se corrija, y el botón ofrece "Marcar entrada" de nuevo a la mañana siguiente.
-- Se pueden hacer varias entradas al día. Marcar salida y volver a entrar aparece como un descanso, y los descansos no cuentan como tiempo trabajado.
-- Las semanas van de lunes a domingo. Una semana aún en curso nunca se marca como incompleta.
-- Un festivo o permiso aprobado en un día laborable reduce la meta de esa semana en la parte de un día. Con 35 horas en 5 días, una semana con un festivo tiene una meta de 28 horas.
-- Los días anteriores a la fecha de inicio de un empleado no cuentan en su contra.
-- A un empleado sin horario se le registran sus horas pero nunca se le marca como ausente ni con horas faltantes.
-- Los cambios de horario inician el lunes de la semana que elijas, así que cada semana siempre se evalúa con un único horario.
-- Solo los días laborables que no son festivos consumen días de permiso. Los permisos no tienen acumulación, arrastre ni prorrateo para quienes ingresan a mitad de año.
-- Cinco contraseñas incorrectas en 15 minutos bloquean ese usuario durante 15 minutos. Un administrador que asigne una nueva contraseña lo desbloquea.
-- Los empleados se desactivan, no se eliminan, para conservar su historial.
+---
 
 ## Estructura del proyecto
 
-```
+```text
 attendance/
-  services.py        reglas de asistencia: el mejor punto para empezar a leer
-  models.py          modelo de datos, incluyendo historial de horarios
-  views.py           páginas de empleados
-  manage_views.py    páginas de administración
-  forms.py           formularios y su validación
-  lockout.py         bloqueo de inicio de sesión
-  notifications.py   avisos por correo
+  models.py          modelos (Employee con cédula/contrato, ScheduleVersion, LaborRuleConfig, TimeEntryBreakdown, DailyAttendanceSummary)
+  labor.py           motor de cálculo laboral colombiano (regla combinada, 8 cubetas, alertas y sincronización)
+  erp.py             generación de reportes Art. 12 Ley 2466, exportación ERP (.xlsx/.csv) y serialización
+  api_views.py       endpoints REST JSON (/api/v1/erp/summary/ y /api/v1/erp/entries/)
+  services.py        reglas de marcación, horarios, metas, solicitudes y correcciones
+  views.py           vistas del portal del empleado
+  manage_views.py    vistas del panel de administración
+  forms.py           formularios y validaciones (incluye horas diarias y reglas laborales)
+  navigation.py      menú lateral y migas de pan
   co_holidays.py     festivos de Colombia (fijos, Ley Emiliani y Semana Santa)
-  pwa.py             lo que necesita un teléfono para instalar el sitio
-  templates/         páginas renderizadas en servidor
-  static/            hoja de estilos compilada, iconos y scripts
-  tests.py           suite de pruebas
-config/              configuración y URLs
-assets/              fuentes de Tailwind y generador de iconos
-docs/                página de presentación para GitHub Pages y capturas
-.github/workflows/   pruebas que corren en cada push
+  lockout.py         bloqueo temporal por intentos fallidos
+  notifications.py   envío de correos SMTP
+  templates/         plantillas HTML en español
+  migrations/        migraciones de esquema, festivos de Colombia, regla inicial y vistas SQL
+  tests.py           pruebas generales de asistencia, vistas y reglas
+  tests_labor.py     pruebas unitarias del motor laboral colombiano
+  tests_erp.py       pruebas de reportes Art. 12, Excel/CSV, API REST y vistas SQL
+config/              configuración Django y enrutamiento raíz
+assets/              fuentes Tailwind CSS y generador de iconos
 ```
 
-## Desarrollo
+---
 
-Ejecutar las pruebas:
+## Pruebas automatizadas
 
-```
+Ejecuta la suite completa (152 pruebas entre lógica de asistencia, motor laboral, exportaciones Excel/CSV, API REST y vistas SQL):
+
+```bash
 python manage.py test
 ```
 
-Para ejecutarlas contra PostgreSQL, define primero `DATABASE_URL`.
+Si editas plantillas HTML y necesitas recompilar Tailwind CSS:
 
-La hoja de estilos en `attendance/static/attendance/app.css` se compila desde `assets/tailwind.css` y las clases usadas en las plantillas. Está confirmada en el repositorio, así que el servidor no necesita Node. Después de editar plantillas o estilos:
-
+```bash
+npm install
+npm run css:build
 ```
-npm install        # una vez
-npm run css:build  # o css:watch mientras trabajas
-```
-
-La página de presentación en `docs/` es un único archivo estático. Su hoja de estilos, `docs/site.css`, se compila desde `assets/site.css` con `npm run site:build`.
-
-Los iconos de la aplicación los genera `assets/make_icons.py` (requiere Pillow, que la app en sí no usa). Ejecútalo solo si quieres cambiar el icono.
-
-`/admin/` es el editor de datos en bruto de Django, accesible para la cuenta principal de superusuario. Los cambios hechos allí omiten el flujo de solicitudes y aprobaciones, así que úsalo solo para corregir errores.
 
 ## Licencia
 
