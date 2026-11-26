@@ -3,4 +3,5 @@ dj-database-url>=2.3
 whitenoise>=6.8
 psycopg[binary]>=3.2
 tzdata
+openpyxl>=3.1
 gunicorn>=23.0; sys_platform != "win32"

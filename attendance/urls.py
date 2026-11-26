@@ -1,7 +1,7 @@
 from django.contrib.auth.views import LogoutView
 from django.urls import path
 
-from . import manage_views, pwa, views
+from . import api_views, manage_views, pwa, views
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -26,6 +26,17 @@ urlpatterns = [
     path("manage/attendance/weekly.csv", manage_views.export_weekly, name="manage_export_weekly"),
     path("manage/attendance/monthly/", manage_views.monthly, name="manage_monthly"),
     path("manage/attendance/monthly.csv", manage_views.export_monthly, name="manage_export_monthly"),
+    path("manage/attendance/surcharges/", manage_views.surcharges, name="manage_surcharges"),
+    path("manage/attendance/art12.csv", manage_views.export_art12_csv, name="manage_export_art12_csv"),
+    path("manage/attendance/art12.xlsx", manage_views.export_art12_xlsx, name="manage_export_art12_xlsx"),
+    path("manage/attendance/erp.csv", manage_views.export_erp_csv, name="manage_export_erp_csv"),
+    path("manage/attendance/erp.xlsx", manage_views.export_erp_xlsx, name="manage_export_erp_xlsx"),
+    path("manage/labor-rules/", manage_views.labor_rules, name="manage_labor_rules"),
+    path("manage/labor-rules/new/", manage_views.labor_rule_edit, name="manage_labor_rule_new"),
+    path("manage/labor-rules/<int:pk>/edit/", manage_views.labor_rule_edit, name="manage_labor_rule_edit"),
+    # API ERP
+    path("api/v1/erp/summary/", api_views.erp_summary, name="api_erp_summary"),
+    path("api/v1/erp/entries/", api_views.erp_entries, name="api_erp_entries"),
     path("manage/requests/", manage_views.requests_inbox, name="manage_requests"),
     path("manage/requests/<str:kind>/<int:pk>/decide/", manage_views.request_decide, name="manage_request_decide"),
     path("manage/requests/leave/<int:pk>/cancel/", manage_views.leave_cancel, name="manage_leave_cancel"),

@@ -550,3 +550,37 @@ class ReviewFilterForm(StyledFormMixin, forms.Form):
         required=False,
         empty_label="Todos los empleados activos",
     )
+
+
+class LaborRuleConfigForm(StyledFormMixin, forms.ModelForm):
+    class Meta:
+        model = LaborRuleConfig
+        fields = [
+            "effective_from",
+            "max_weekly_hours",
+            "min_daily_hours",
+            "max_daily_hours",
+            "night_start",
+            "night_end",
+            "max_daily_overtime_hours",
+            "max_weekly_overtime_hours",
+            "night_surcharge_pct",
+            "sunday_holiday_surcharge_pct",
+            "overtime_day_pct",
+            "overtime_night_pct",
+            "overtime_holiday_day_pct",
+            "overtime_holiday_night_pct",
+        ]
+        widgets = {
+            "effective_from": date_input(),
+            "night_start": time_input(),
+            "night_end": time_input(),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        min_d = cleaned.get("min_daily_hours")
+        max_d = cleaned.get("max_daily_hours")
+        if min_d is not None and max_d is not None and min_d > max_d:
+            self.add_error("max_daily_hours", "La jornada máxima diaria no puede ser menor que la mínima.")
+        return cleaned

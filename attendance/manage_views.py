@@ -18,13 +18,14 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from . import co_holidays, lockout, notifications, services
+from . import co_holidays, erp, lockout, notifications, services
 from .dates import clock_text, date_text
 from .forms import (
     EmployeeCreateForm,
     EmployeeForm,
     EntryForm,
     HolidayForm,
+    LaborRuleConfigForm,
     LeaveAllowanceForm,
     RemoveEntryForm,
     ResetPasswordForm,
@@ -37,6 +38,7 @@ from .middleware import SIGNED_IN_AS
 from .models import (
     Employee,
     Holiday,
+    LaborRuleConfig,
     LeaveAllowance,
     LeaveRequest,
     MissingTimeRequest,
@@ -872,3 +874,89 @@ def holiday_preset(request):
     else:
         messages.info(request, f"Los festivos de Colombia para {year} ya están en la lista.")
     return redirect(f"{reverse('manage_holidays')}?year={year}")
+
+
+# --- Recargos, extras, Art. 12 Ley 2466 y ERP -------------------------------
+
+
+def _surcharge_filters(request):
+    today = services.today()
+    default_start = services.week_start(today)
+    default_end = default_start + timedelta(days=6)
+    form = ReviewFilterForm(request.GET or None, initial={"start": default_start, "end": default_end})
+    if form.is_valid():
+        start = form.cleaned_data["start"]
+        end = form.cleaned_data["end"]
+        if end < start:
+            start, end = end, start
+        employee = form.cleaned_data["employee"]
+    else:
+        start, end, employee = default_start, default_end, None
+    return form, start, end, employee
+
+
+@admin_required
+def surcharges(request):
+    form, start, end, employee = _surcharge_filters(request)
+    preview = erp.build_preview_context(start, end, employee=employee)
+    rule = LaborRuleConfig.for_date(end)
+    return render(
+        request,
+        "attendance/manage/surcharges.html",
+        {
+            "form": form,
+            "start": start,
+            "end": end,
+            "rule": rule,
+            "query": request.GET.urlencode(),
+            **preview,
+        },
+    )
+
+
+@admin_required
+def export_art12_csv(request):
+    _, start, end, employee = _surcharge_filters(request)
+    return erp.export_art12_csv(start, end, employee=employee)
+
+
+@admin_required
+def export_art12_xlsx(request):
+    _, start, end, employee = _surcharge_filters(request)
+    return erp.export_art12_xlsx(start, end, employee=employee)
+
+
+@admin_required
+def export_erp_csv(request):
+    _, start, end, employee = _surcharge_filters(request)
+    return erp.export_erp_csv(start, end, employee=employee)
+
+
+@admin_required
+def export_erp_xlsx(request):
+    _, start, end, employee = _surcharge_filters(request)
+    return erp.export_erp_xlsx(start, end, employee=employee)
+
+
+@admin_required
+def labor_rules(request):
+    rules = LaborRuleConfig.objects.all()
+    return render(request, "attendance/manage/labor_rules.html", {"rules": rules})
+
+
+@admin_required
+def labor_rule_edit(request, pk=None):
+    rule = get_object_or_404(LaborRuleConfig, pk=pk) if pk else None
+    form = LaborRuleConfigForm(request.POST or None, instance=rule)
+    if request.method == "POST" and form.is_valid():
+        saved = form.save()
+        messages.success(request, f"Regla laboral vigente desde {saved.effective_from} guardada.")
+        return redirect("manage_labor_rules")
+    title = f"Editar regla ({rule.effective_from})" if rule else "Nueva regla laboral"
+    return form_page(
+        request,
+        form,
+        title,
+        reverse("manage_labor_rules"),
+        trail=[crumb("Reglas laborales", "manage_labor_rules"), crumb(title)],
+    )

@@ -1,0 +1,49 @@
+{% extends "attendance/base.html" %}
+{% block title %}Reglas laborales · Control de Asistencia{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <h1 class="page-title">Reglas laborales</h1>
+  <a class="btn btn-primary" href="{% url 'manage_labor_rule_new' %}">Nueva vigencia</a>
+</div>
+
+<p class="mt-2 text-sm text-slate-600">
+  Parámetros legales vigentes por fecha para jornada ordinaria, franja nocturna, porcentajes de recargos y alertas de horas extras.
+</p>
+
+<div class="card mt-4 overflow-x-auto">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Vigente desde</th>
+        <th class="text-right">Semanal máx.</th>
+        <th class="text-right">Diaria mín–máx</th>
+        <th>Franja nocturna</th>
+        <th class="text-right">Rec. nocturno</th>
+        <th class="text-right">Dom / Fest</th>
+        <th class="text-right">Extra diurna / noct.</th>
+        <th class="text-right">Alertas (día / sem)</th>
+        <th><span class="sr-only">Acciones</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rule in rules %}
+      <tr>
+        <td class="whitespace-nowrap font-medium text-slate-900">{{ rule.effective_from|date:"j M Y" }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ rule.max_weekly_hours.normalize }} h</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ rule.min_daily_hours.normalize }}–{{ rule.max_daily_hours.normalize }} h</td>
+        <td class="whitespace-nowrap">{{ rule.night_start|time:"g:i A" }} – {{ rule.night_end|time:"g:i A" }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ rule.night_surcharge_pct.normalize }}%</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ rule.sunday_holiday_surcharge_pct.normalize }}%</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ rule.overtime_day_pct.normalize }}% / {{ rule.overtime_night_pct.normalize }}%</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ rule.max_daily_overtime_hours.normalize }} h / {{ rule.max_weekly_overtime_hours.normalize }} h</td>
+        <td class="text-right whitespace-nowrap">
+          <a class="btn btn-secondary btn-sm" href="{% url 'manage_labor_rule_edit' rule.pk %}">Editar</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" class="py-6 text-center text-slate-500">No hay reglas configuradas.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

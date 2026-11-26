@@ -52,6 +52,7 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS") or ["localhost", "127.0.0.1", "[::1]"]
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
+ERP_API_TOKEN = os.environ.get("ERP_API_TOKEN", "")
 
 # Turn on when the app is served over HTTPS behind a reverse proxy.
 if env_bool("HTTPS"):

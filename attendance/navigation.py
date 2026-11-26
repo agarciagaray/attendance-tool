@@ -22,14 +22,14 @@ class Section:
 
 ADMIN_MENU = (
     Section("Hoy", "manage_dashboard", "pulse", ("manage_dashboard",)),
-    Section("Asistencia", "manage_review", "bars", ("manage_review", "manage_monthly")),
+    Section("Asistencia", "manage_review", "bars", ("manage_review", "manage_monthly", "manage_surcharges")),
     Section("Solicitudes", "manage_requests", "inbox", ("manage_request",)),
     Section("Empleados", "manage_employees", "people", ("manage_employee", "manage_entry")),
     Section("Horarios", "manage_schedules", "grid", ("manage_schedule",)),
     Section("Festivos", "manage_holidays", "star", ("manage_holiday",)),
     Section("Permisos", "manage_leave", "briefcase", ("manage_leave",)),
     Section("Correo", "manage_email", "mail", ("manage_email",)),
-    Section("Configuración", "manage_settings", "sliders", ("manage_settings",)),
+    Section("Configuración", "manage_settings", "sliders", ("manage_settings", "manage_labor_rule")),
 )
 
 EMPLOYEE_MENU = (

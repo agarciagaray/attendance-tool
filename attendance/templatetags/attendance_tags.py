@@ -70,6 +70,25 @@ def duration(value):
 
 
 @register.filter
+def minutes_hm(value):
+    """Minutos enteros como "8h 24m" o "0m"."""
+    if value is None:
+        return "—"
+    mins = int(value)
+    if mins == 0:
+        return "0m"
+    return duration_text(timedelta(minutes=mins))
+
+
+@register.filter
+def minutes_dec(value):
+    """Minutos enteros en horas decimales (p. ej. "8.40 h")."""
+    if value is None:
+        return "—"
+    return f"{int(value) / 60:.2f} h"
+
+
+@register.filter
 def signed_duration(value):
     """A timedelta as "+1h 10m" or "−2h 50m"."""
     if not isinstance(value, timedelta):

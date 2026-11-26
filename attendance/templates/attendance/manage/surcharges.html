@@ -1,0 +1,132 @@
+{% extends "attendance/base.html" %}
+{% load attendance_tags %}
+{% block title %}Recargos y horas extras · Control de Asistencia{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3">
+  <h1 class="page-title">Asistencia</h1>
+  {% include "attendance/manage/_attendance_tabs.html" with tab="surcharges" %}
+</div>
+
+<form method="get" class="card mt-4 flex flex-wrap items-end gap-3 p-4">
+  <div>
+    <label class="label" for="{{ form.start.id_for_label }}">Desde</label>
+    {{ form.start }}
+  </div>
+  <div>
+    <label class="label" for="{{ form.end.id_for_label }}">Hasta</label>
+    {{ form.end }}
+  </div>
+  <div class="min-w-48">
+    <label class="label" for="{{ form.employee.id_for_label }}">Empleado</label>
+    {{ form.employee }}
+  </div>
+  <button class="btn btn-primary">Mostrar</button>
+  <div class="ml-auto flex flex-wrap gap-2">
+    <a class="btn btn-secondary" href="{% url 'manage_export_art12_xlsx' %}?{{ query }}">Art. 12 (.xlsx)</a>
+    <a class="btn btn-secondary" href="{% url 'manage_export_art12_csv' %}?{{ query }}">Art. 12 (.csv)</a>
+    <a class="btn btn-secondary" href="{% url 'manage_export_erp_xlsx' %}?{{ query }}">ERP (.xlsx)</a>
+    <a class="btn btn-secondary" href="{% url 'manage_export_erp_csv' %}?{{ query }}">ERP (.csv)</a>
+    <a class="btn btn-secondary" href="{% url 'manage_labor_rules' %}">Reglas laborales</a>
+  </div>
+</form>
+
+<p class="mt-4 text-sm text-slate-600">
+  Desglose laboral del {{ start|date:"j M Y" }} al {{ end|date:"j M Y" }}
+  (regla vigente: {{ rule.max_weekly_hours.normalize }} h/sem, nocturno {{ rule.night_start|time:"g:i A" }}–{{ rule.night_end|time:"g:i A" }}, alertas &gt; {{ rule.max_daily_overtime_hours.normalize }} h/día o &gt; {{ rule.max_weekly_overtime_hours.normalize }} h/sem).
+</p>
+
+<div class="card mt-2 overflow-x-auto">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Empleado</th>
+        <th class="text-right">Total</th>
+        <th class="text-right">Ord. diurna</th>
+        <th class="text-right">Rec. nocturno ({{ rule.night_surcharge_pct.normalize }}%)</th>
+        <th class="text-right">Ord. dom/fest ({{ rule.sunday_holiday_surcharge_pct.normalize }}%)</th>
+        <th class="text-right">Extra diurna ({{ rule.overtime_day_pct.normalize }}%)</th>
+        <th class="text-right">Extra nocturna ({{ rule.overtime_night_pct.normalize }}%)</th>
+        <th class="text-right">Extra dom/fest</th>
+        <th class="text-right">Total extras</th>
+        <th>Alertas</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in employees_data %}
+      <tr>
+        <td class="whitespace-nowrap">
+          <a class="link" href="{% url 'manage_employee_detail' item.employee.pk %}">{{ item.employee.display_name }}</a>
+          <div class="text-xs text-slate-500">
+            {% if item.employee.document_number %}C.C. {{ item.employee.document_number }} · {% endif %}{{ item.employee.get_contract_type_display }}
+          </div>
+        </td>
+        <td class="text-right whitespace-nowrap font-medium tabular-nums">{{ item.totals.total_worked|minutes_hm }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ item.totals.ordinary_day|minutes_hm }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ item.totals.ordinary_night|minutes_hm }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ item.totals.ordinary_holiday|minutes_hm }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ item.totals.overtime_day|minutes_hm }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ item.totals.overtime_night|minutes_hm }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ item.totals.overtime_holiday|minutes_hm }}</td>
+        <td class="text-right whitespace-nowrap font-medium tabular-nums">{{ item.totals.total_overtime|minutes_hm }}</td>
+        <td class="whitespace-nowrap">
+          {% if item.totals.daily_alerts %}
+          <span class="badge bg-amber-100 text-amber-800">{{ item.totals.daily_alerts }} día{{ item.totals.daily_alerts|pluralize }} &gt; {{ rule.max_daily_overtime_hours.normalize }}h</span>
+          {% endif %}
+          {% if item.totals.weekly_alerts %}
+          <span class="badge bg-rose-100 text-rose-800">{{ item.totals.weekly_alerts }} sem &gt; {{ rule.max_weekly_overtime_hours.normalize }}h</span>
+          {% endif %}
+          {% if not item.totals.daily_alerts and not item.totals.weekly_alerts %}
+          <span class="text-xs text-slate-400">Sin alertas</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="10" class="py-6 text-center text-slate-500">No hay registros calculados en este rango de fechas.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if summaries %}
+<h2 class="section-title mt-6 mb-2">Detalle diario (Art. 12 Ley 2466)</h2>
+<div class="card overflow-x-auto">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Empleado</th>
+        <th class="text-right">Trabajado</th>
+        <th class="text-right">Ord. diurna</th>
+        <th class="text-right">Rec. nocturno</th>
+        <th class="text-right">Ord. dom/fest</th>
+        <th class="text-right">Extra diurna</th>
+        <th class="text-right">Extra nocturna</th>
+        <th class="text-right">Extra dom/fest</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for day in summaries %}
+      <tr>
+        <td class="whitespace-nowrap">{{ day.date|date:"D j M Y" }}</td>
+        <td class="whitespace-nowrap">{{ day.employee.display_name }}</td>
+        <td class="text-right whitespace-nowrap font-medium tabular-nums">{{ day.total_worked_minutes|minutes_hm }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ day.ordinary_day_minutes|minutes_hm }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ day.ordinary_night_minutes|minutes_hm }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ day.ordinary_holiday_day_minutes|add:day.ordinary_holiday_night_minutes|minutes_hm }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ day.overtime_day_minutes|minutes_hm }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ day.overtime_night_minutes|minutes_hm }}</td>
+        <td class="text-right whitespace-nowrap tabular-nums">{{ day.overtime_holiday_day_minutes|add:day.overtime_holiday_night_minutes|minutes_hm }}</td>
+        <td class="whitespace-nowrap">
+          {% if day.is_holiday %}<span class="badge bg-violet-100 text-violet-800">Festivo</span>{% endif %}
+          {% if day.is_sunday %}<span class="badge bg-slate-100 text-slate-700">Domingo</span>{% endif %}
+          {% if day.daily_overtime_exceeded %}<span class="badge bg-amber-100 text-amber-800">&gt;2h extra</span>{% endif %}
+          {% if day.weekly_overtime_exceeded %}<span class="badge bg-rose-100 text-rose-800">&gt;12h sem</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}
